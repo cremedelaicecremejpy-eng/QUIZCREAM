@@ -45,7 +45,18 @@
     .progress {
       font-size: 0.8125rem;
       color: #6b7280;
+      margin-bottom: 0.5rem;
+    }
+
+    .timer {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #667eea;
       margin-bottom: 1rem;
+    }
+
+    .timer.urgent {
+      color: #dc2626;
     }
 
     .card .question {
@@ -144,16 +155,69 @@
     .next-btn.hidden {
       display: none;
     }
+
+    .quiz-screen.hidden,
+    .score-screen.hidden {
+      display: none;
+    }
+
+    .score-screen .score-value {
+      font-size: 3rem;
+      font-weight: 800;
+      color: #667eea;
+      margin: 1rem 0 0.5rem;
+    }
+
+    .score-screen .score-label {
+      font-size: 1.125rem;
+      color: #6b7280;
+      margin-bottom: 2rem;
+    }
+
+    .score-screen .score-message {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 1.5rem;
+    }
+
+    .restart-btn {
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #ffffff;
+      background: #667eea;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .restart-btn:hover {
+      background: #5a6fd6;
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Trivia</h1>
-    <p id="progress" class="progress"></p>
-    <p id="question" class="question"></p>
-    <div id="options" class="options"></div>
-    <p id="feedback" class="feedback"></p>
-    <button id="next-btn" class="next-btn hidden" onclick="nextQuestion()">Next Question</button>
+    <div id="quiz-screen" class="quiz-screen">
+      <h1>Trivia</h1>
+      <p id="progress" class="progress"></p>
+      <p id="timer" class="timer">7s</p>
+      <p id="question" class="question"></p>
+      <div id="options" class="options"></div>
+      <p id="feedback" class="feedback"></p>
+      <button id="next-btn" class="next-btn hidden" onclick="nextQuestion()">Next Question</button>
+    </div>
+
+    <div id="score-screen" class="score-screen hidden">
+      <h1>Quiz Complete</h1>
+      <p class="score-message">Here's how you did:</p>
+      <p id="score-value" class="score-value"></p>
+      <p id="score-label" class="score-label"></p>
+      <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
+    </div>
   </div>
 
   <script>
@@ -180,8 +244,74 @@
       }
     ];
 
+    const TIME_LIMIT = 7;
+
     let currentIndex = 0;
     let answered = false;
+    let correctCount = 0;
+    let timeLeft = TIME_LIMIT;
+    let timerInterval = null;
+
+    function clearTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function updateTimerDisplay() {
+      const timerEl = document.getElementById('timer');
+      timerEl.textContent = `${timeLeft}s`;
+      timerEl.classList.toggle('urgent', timeLeft <= 3);
+    }
+
+    function startTimer() {
+      clearTimer();
+      timeLeft = TIME_LIMIT;
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        timeLeft -= 1;
+        updateTimerDisplay();
+
+        if (timeLeft <= 0) {
+          clearTimer();
+          handleTimeout();
+        }
+      }, 1000);
+    }
+
+    function revealAnswer(selected) {
+      const q = questions[currentIndex];
+      const feedback = document.getElementById('feedback');
+      const buttons = document.querySelectorAll('.options button');
+      const isCorrect = selected === q.answer;
+
+      buttons.forEach(btn => {
+        btn.disabled = true;
+        if (btn.textContent === q.answer) {
+          btn.classList.add('selected-correct');
+        } else if (selected && btn.textContent === selected) {
+          btn.classList.add('selected-wrong');
+        }
+      });
+
+      if (isCorrect) {
+        correctCount += 1;
+        feedback.textContent = 'Correct!';
+        feedback.className = 'feedback correct';
+      } else if (selected) {
+        feedback.textContent = 'Wrong!';
+        feedback.className = 'feedback wrong';
+      } else {
+        feedback.textContent = "Time's up!";
+        feedback.className = 'feedback wrong';
+      }
+
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.textContent = currentIndex === questions.length - 1 ? 'See Results' : 'Next Question';
+      nextBtn.classList.remove('hidden');
+    }
 
     function loadQuestion() {
       const q = questions[currentIndex];
@@ -200,42 +330,52 @@
       q.options.forEach(option => {
         const btn = document.createElement('button');
         btn.textContent = option;
-        btn.onclick = () => checkAnswer(option, btn);
+        btn.onclick = () => checkAnswer(option);
         optionsEl.appendChild(btn);
       });
+
+      startTimer();
     }
 
-    function checkAnswer(selected, clickedBtn) {
+    function checkAnswer(selected) {
       if (answered) return;
       answered = true;
+      clearTimer();
+      revealAnswer(selected);
+    }
 
-      const q = questions[currentIndex];
-      const feedback = document.getElementById('feedback');
-      const buttons = document.querySelectorAll('.options button');
-      const isCorrect = selected === q.answer;
-
-      buttons.forEach(btn => {
-        btn.disabled = true;
-        if (btn.textContent === q.answer) {
-          btn.classList.add('selected-correct');
-        } else if (btn === clickedBtn) {
-          btn.classList.add('selected-wrong');
-        }
-      });
-
-      if (isCorrect) {
-        feedback.textContent = 'Correct!';
-        feedback.className = 'feedback correct';
-      } else {
-        feedback.textContent = 'Wrong!';
-        feedback.className = 'feedback wrong';
-      }
-
-      document.getElementById('next-btn').classList.remove('hidden');
+    function handleTimeout() {
+      if (answered) return;
+      answered = true;
+      revealAnswer(null);
     }
 
     function nextQuestion() {
-      currentIndex = (currentIndex + 1) % questions.length;
+      if (currentIndex >= questions.length - 1) {
+        showScore();
+        return;
+      }
+
+      currentIndex += 1;
+      loadQuestion();
+    }
+
+    function showScore() {
+      clearTimer();
+      document.getElementById('quiz-screen').classList.add('hidden');
+      document.getElementById('score-screen').classList.remove('hidden');
+      document.getElementById('score-value').textContent =
+        `${correctCount} / ${questions.length}`;
+      document.getElementById('score-label').textContent =
+        `${correctCount} correct out of ${questions.length} questions`;
+    }
+
+    function restartQuiz() {
+      currentIndex = 0;
+      correctCount = 0;
+      answered = false;
+      document.getElementById('score-screen').classList.add('hidden');
+      document.getElementById('quiz-screen').classList.remove('hidden');
       loadQuestion();
     }
 
