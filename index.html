@@ -45,7 +45,51 @@
     .progress {
       font-size: 0.8125rem;
       color: #6b7280;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .timer {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .timer-bar {
+      flex: 1;
+      height: 8px;
+      background: #ececf4;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .timer-fill {
+      height: 100%;
+      width: 100%;
+      background: #667eea;
+      border-radius: 999px;
+      transform-origin: left center;
+      transition: transform 1s linear, background 0.2s;
+    }
+
+    .timer-fill.no-transition {
+      transition: none;
+    }
+
+    .timer-fill.warning {
+      background: #f59e0b;
+    }
+
+    .timer-fill.danger {
+      background: #dc2626;
+    }
+
+    .timer-count {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      min-width: 1.5rem;
+      text-align: right;
     }
 
     .card .question {
@@ -119,7 +163,8 @@
       color: #dc2626;
     }
 
-    .next-btn {
+    .next-btn,
+    .play-again-btn {
       margin-top: 1.25rem;
       padding: 0.75rem 1.5rem;
       font-size: 0.9375rem;
@@ -132,31 +177,74 @@
       transition: background 0.2s, transform 0.15s;
     }
 
-    .next-btn:hover {
+    .next-btn:hover,
+    .play-again-btn:hover {
       background: #5a6fd6;
       transform: translateY(-1px);
     }
 
-    .next-btn:active {
+    .next-btn:active,
+    .play-again-btn:active {
       transform: translateY(0);
     }
 
-    .next-btn.hidden {
+    .next-btn.hidden,
+    .hidden {
       display: none;
+    }
+
+    .score-page .score-value {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      line-height: 1;
+      margin: 0.5rem 0 0.75rem;
+    }
+
+    .score-page .score-label {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #4b5563;
+      margin-bottom: 0.5rem;
+    }
+
+    .score-page .score-message {
+      font-size: 1rem;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Trivia</h1>
-    <p id="progress" class="progress"></p>
-    <p id="question" class="question"></p>
-    <div id="options" class="options"></div>
-    <p id="feedback" class="feedback"></p>
-    <button id="next-btn" class="next-btn hidden" onclick="nextQuestion()">Next Question</button>
+    <div id="quiz-view">
+      <h1>Trivia</h1>
+      <p id="progress" class="progress"></p>
+      <div class="timer" aria-live="polite">
+        <div class="timer-bar">
+          <div id="timer-fill" class="timer-fill"></div>
+        </div>
+        <span id="timer-count" class="timer-count">7</span>
+      </div>
+      <p id="question" class="question"></p>
+      <div id="options" class="options"></div>
+      <p id="feedback" class="feedback"></p>
+      <button id="next-btn" class="next-btn hidden" onclick="nextQuestion()">Next Question</button>
+    </div>
+
+    <div id="score-view" class="score-page hidden">
+      <h1>Quiz Complete</h1>
+      <p class="score-label">Your score</p>
+      <p id="score-value" class="score-value"></p>
+      <p id="score-detail" class="score-message"></p>
+      <p id="score-message" class="score-message"></p>
+      <button class="play-again-btn" onclick="restartQuiz()">Play Again</button>
+    </div>
   </div>
 
   <script>
+    const QUESTION_TIME_SECONDS = 7;
+
     const questions = [
       {
         text: 'What is the capital of France?',
@@ -181,7 +269,53 @@
     ];
 
     let currentIndex = 0;
+    let score = 0;
     let answered = false;
+    let remainingSeconds = QUESTION_TIME_SECONDS;
+    let timerId = null;
+
+    function clearTimer() {
+      if (timerId !== null) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    function updateTimerDisplay() {
+      const fill = document.getElementById('timer-fill');
+      const count = document.getElementById('timer-count');
+      const ratio = remainingSeconds / QUESTION_TIME_SECONDS;
+
+      count.textContent = remainingSeconds;
+      fill.style.transform = `scaleX(${ratio})`;
+      fill.classList.remove('warning', 'danger');
+
+      if (remainingSeconds <= 2) {
+        fill.classList.add('danger');
+      } else if (remainingSeconds <= 4) {
+        fill.classList.add('warning');
+      }
+    }
+
+    function startTimer() {
+      clearTimer();
+      remainingSeconds = QUESTION_TIME_SECONDS;
+
+      const fill = document.getElementById('timer-fill');
+      fill.classList.add('no-transition');
+      updateTimerDisplay();
+      void fill.offsetWidth;
+      fill.classList.remove('no-transition');
+
+      timerId = setInterval(() => {
+        remainingSeconds -= 1;
+        updateTimerDisplay();
+
+        if (remainingSeconds <= 0) {
+          handleTimeout();
+        }
+      }, 1000);
+    }
 
     function loadQuestion() {
       const q = questions[currentIndex];
@@ -192,7 +326,12 @@
       document.getElementById('question').textContent = q.text;
       document.getElementById('feedback').textContent = '';
       document.getElementById('feedback').className = 'feedback';
-      document.getElementById('next-btn').classList.add('hidden');
+
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.classList.add('hidden');
+      nextBtn.textContent = currentIndex === questions.length - 1
+        ? 'See Results'
+        : 'Next Question';
 
       const optionsEl = document.getElementById('options');
       optionsEl.innerHTML = '';
@@ -203,27 +342,41 @@
         btn.onclick = () => checkAnswer(option, btn);
         optionsEl.appendChild(btn);
       });
+
+      startTimer();
     }
 
-    function checkAnswer(selected, clickedBtn) {
-      if (answered) return;
-      answered = true;
-
+    function lockOptions(selectedBtn) {
       const q = questions[currentIndex];
-      const feedback = document.getElementById('feedback');
       const buttons = document.querySelectorAll('.options button');
-      const isCorrect = selected === q.answer;
 
       buttons.forEach(btn => {
         btn.disabled = true;
         if (btn.textContent === q.answer) {
           btn.classList.add('selected-correct');
-        } else if (btn === clickedBtn) {
+        } else if (selectedBtn && btn === selectedBtn) {
           btn.classList.add('selected-wrong');
         }
       });
+    }
+
+    function finishQuestion() {
+      document.getElementById('next-btn').classList.remove('hidden');
+    }
+
+    function checkAnswer(selected, clickedBtn) {
+      if (answered) return;
+      answered = true;
+      clearTimer();
+
+      const q = questions[currentIndex];
+      const feedback = document.getElementById('feedback');
+      const isCorrect = selected === q.answer;
+
+      lockOptions(clickedBtn);
 
       if (isCorrect) {
+        score += 1;
         feedback.textContent = 'Correct!';
         feedback.className = 'feedback correct';
       } else {
@@ -231,11 +384,64 @@
         feedback.className = 'feedback wrong';
       }
 
-      document.getElementById('next-btn').classList.remove('hidden');
+      finishQuestion();
+    }
+
+    function handleTimeout() {
+      if (answered) return;
+      answered = true;
+      clearTimer();
+      remainingSeconds = 0;
+      updateTimerDisplay();
+
+      lockOptions(null);
+
+      const feedback = document.getElementById('feedback');
+      feedback.textContent = "Time's up!";
+      feedback.className = 'feedback wrong';
+
+      finishQuestion();
+    }
+
+    function showScorePage() {
+      clearTimer();
+      document.getElementById('quiz-view').classList.add('hidden');
+      document.getElementById('score-view').classList.remove('hidden');
+
+      const total = questions.length;
+      const percent = Math.round((score / total) * 100);
+
+      document.getElementById('score-value').textContent = `${score}/${total}`;
+      document.getElementById('score-detail').textContent =
+        `${percent}% correct`;
+
+      let message = 'Keep practicing!';
+      if (score === total) {
+        message = 'Perfect score!';
+      } else if (score >= Math.ceil(total * 0.75)) {
+        message = 'Great job!';
+      } else if (score >= Math.ceil(total * 0.5)) {
+        message = 'Nice try!';
+      }
+
+      document.getElementById('score-message').textContent = message;
     }
 
     function nextQuestion() {
-      currentIndex = (currentIndex + 1) % questions.length;
+      if (currentIndex >= questions.length - 1) {
+        showScorePage();
+        return;
+      }
+
+      currentIndex += 1;
+      loadQuestion();
+    }
+
+    function restartQuiz() {
+      currentIndex = 0;
+      score = 0;
+      document.getElementById('score-view').classList.add('hidden');
+      document.getElementById('quiz-view').classList.remove('hidden');
       loadQuestion();
     }
 
