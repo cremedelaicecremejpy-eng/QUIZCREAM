@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Topic {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  questions Question[]
+  matches   Match[]
+}
+
+model Question {
+  id            String @id @default(cuid())
+  topicId       String
+  text          String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctOption String
+  topic         Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId])
+}
+
+model User {
+  id       String @id @default(cuid())
+  email    String @unique
+  username String @unique
+  password String
+  wins     Int    @default(0)
+  losses   Int    @default(0)
+}
+
+model Match {
+  id           String   @id @default(cuid())
+  topicId      String
+  player1Id    String
+  player2Id    String
+  player1Score Int
+  player2Score Int
+  winnerId     String?
+  createdAt    DateTime @default(now())
+  topic        Topic    @relation(fields: [topicId], references: [id])
+}
