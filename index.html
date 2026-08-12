@@ -156,11 +156,6 @@
       display: none;
     }
 
-    .quiz-screen.hidden,
-    .score-screen.hidden {
-      display: none;
-    }
-
     .score-screen .score-value {
       font-size: 3rem;
       font-weight: 800;
@@ -197,11 +192,65 @@
       background: #5a6fd6;
       transform: translateY(-1px);
     }
+
+    .topic-screen.hidden,
+    .quiz-screen.hidden,
+    .score-screen.hidden {
+      display: none;
+    }
+
+    .topic-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .topic-btn {
+      padding: 1rem 1.25rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      background: #f4f4f8;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+
+    .topic-btn:hover:not(:disabled) {
+      background: #ececf4;
+      border-color: #667eea;
+      transform: translateY(-1px);
+    }
+
+    .topic-btn:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .error-msg {
+      color: #dc2626;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <div id="quiz-screen" class="quiz-screen">
+    <div id="topic-screen" class="topic-screen">
+      <h1>Quiz Cream</h1>
+      <p class="subtitle">Choose a topic. You'll get 7 random questions from the database.</p>
+      <div id="topic-list" class="topic-list"></div>
+      <p id="topic-error" class="error-msg"></p>
+    </div>
+
+    <div id="quiz-screen" class="quiz-screen hidden">
       <h1>Trivia</h1>
       <p id="progress" class="progress"></p>
       <p id="timer" class="timer">7s</p>
@@ -221,31 +270,12 @@
   </div>
 
   <script>
-    const questions = [
-      {
-        text: 'What is the capital of France?',
-        options: ['Paris', 'London', 'Berlin', 'Madrid'],
-        answer: 'Paris'
-      },
-      {
-        text: 'What is the capital of Japan?',
-        options: ['Seoul', 'Tokyo', 'Beijing', 'Bangkok'],
-        answer: 'Tokyo'
-      },
-      {
-        text: 'What is the capital of Australia?',
-        options: ['Sydney', 'Melbourne', 'Canberra', 'Perth'],
-        answer: 'Canberra'
-      },
-      {
-        text: 'What is the capital of Brazil?',
-        options: ['Rio de Janeiro', 'São Paulo', 'Brasília', 'Salvador'],
-        answer: 'Brasília'
-      }
-    ];
-
+    const API_BASE = 'http://localhost:3001';
     const TIME_LIMIT = 7;
+    const QUESTION_COUNT = 7;
 
+    let questions = [];
+    let selectedTopicName = '';
     let currentIndex = 0;
     let answered = false;
     let correctCount = 0;
@@ -256,6 +286,62 @@
       if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
+      }
+    }
+
+    function showScreen(screenId) {
+      ['topic-screen', 'quiz-screen', 'score-screen'].forEach((id) => {
+        document.getElementById(id).classList.toggle('hidden', id !== screenId);
+      });
+    }
+
+    async function loadTopics() {
+      const topicList = document.getElementById('topic-list');
+      const errorEl = document.getElementById('topic-error');
+      topicList.innerHTML = '<button class="topic-btn" disabled>Loading topics...</button>';
+      errorEl.textContent = '';
+
+      try {
+        const response = await fetch(`${API_BASE}/api/topics`);
+        if (!response.ok) throw new Error('Could not load topics');
+
+        const topics = await response.json();
+        topicList.innerHTML = '';
+
+        topics.forEach((topic) => {
+          const btn = document.createElement('button');
+          btn.className = 'topic-btn';
+          btn.textContent = `${topic.name} (${topic._count.questions} questions)`;
+          btn.onclick = () => startQuiz(topic.id, topic.name);
+          topicList.appendChild(btn);
+        });
+      } catch (error) {
+        topicList.innerHTML = '';
+        errorEl.textContent =
+          'Could not connect to server. Run "npm.cmd run dev" in the server folder, then refresh.';
+      }
+    }
+
+    async function startQuiz(topicId, topicName) {
+      const errorEl = document.getElementById('topic-error');
+      errorEl.textContent = '';
+
+      try {
+        const response = await fetch(
+          `${API_BASE}/api/topics/${topicId}/questions/random?count=${QUESTION_COUNT}`
+        );
+        if (!response.ok) throw new Error('Could not load questions');
+
+        questions = await response.json();
+        selectedTopicName = topicName;
+        currentIndex = 0;
+        correctCount = 0;
+        answered = false;
+
+        showScreen('quiz-screen');
+        loadQuestion();
+      } catch (error) {
+        errorEl.textContent = error.message;
       }
     }
 
@@ -281,17 +367,17 @@
       }, 1000);
     }
 
-    function revealAnswer(selected) {
+    function revealAnswer(selectedIndex) {
       const q = questions[currentIndex];
       const feedback = document.getElementById('feedback');
       const buttons = document.querySelectorAll('.options button');
-      const isCorrect = selected === q.answer;
+      const isCorrect = selectedIndex === q.correctIndex;
 
-      buttons.forEach(btn => {
+      buttons.forEach((btn, index) => {
         btn.disabled = true;
-        if (btn.textContent === q.answer) {
+        if (index === q.correctIndex) {
           btn.classList.add('selected-correct');
-        } else if (selected && btn.textContent === selected) {
+        } else if (selectedIndex !== null && index === selectedIndex) {
           btn.classList.add('selected-wrong');
         }
       });
@@ -300,7 +386,7 @@
         correctCount += 1;
         feedback.textContent = 'Correct!';
         feedback.className = 'feedback correct';
-      } else if (selected) {
+      } else if (selectedIndex !== null) {
         feedback.textContent = 'Wrong!';
         feedback.className = 'feedback wrong';
       } else {
@@ -318,7 +404,7 @@
       answered = false;
 
       document.getElementById('progress').textContent =
-        `Question ${currentIndex + 1} of ${questions.length}`;
+        `${selectedTopicName} — Question ${currentIndex + 1} of ${questions.length}`;
       document.getElementById('question').textContent = q.text;
       document.getElementById('feedback').textContent = '';
       document.getElementById('feedback').className = 'feedback';
@@ -327,21 +413,21 @@
       const optionsEl = document.getElementById('options');
       optionsEl.innerHTML = '';
 
-      q.options.forEach(option => {
+      q.options.forEach((option, index) => {
         const btn = document.createElement('button');
         btn.textContent = option;
-        btn.onclick = () => checkAnswer(option);
+        btn.onclick = () => checkAnswer(index);
         optionsEl.appendChild(btn);
       });
 
       startTimer();
     }
 
-    function checkAnswer(selected) {
+    function checkAnswer(selectedIndex) {
       if (answered) return;
       answered = true;
       clearTimer();
-      revealAnswer(selected);
+      revealAnswer(selectedIndex);
     }
 
     function handleTimeout() {
@@ -362,24 +448,24 @@
 
     function showScore() {
       clearTimer();
-      document.getElementById('quiz-screen').classList.add('hidden');
-      document.getElementById('score-screen').classList.remove('hidden');
+      showScreen('score-screen');
       document.getElementById('score-value').textContent =
         `${correctCount} / ${questions.length}`;
       document.getElementById('score-label').textContent =
-        `${correctCount} correct out of ${questions.length} questions`;
+        `${correctCount} correct out of ${questions.length} questions in ${selectedTopicName}`;
     }
 
     function restartQuiz() {
+      clearTimer();
       currentIndex = 0;
       correctCount = 0;
       answered = false;
-      document.getElementById('score-screen').classList.add('hidden');
-      document.getElementById('quiz-screen').classList.remove('hidden');
-      loadQuestion();
+      questions = [];
+      showScreen('topic-screen');
+      loadTopics();
     }
 
-    loadQuestion();
+    loadTopics();
   </script>
 </body>
 </html>
