@@ -33,6 +33,11 @@
       text-align: center;
     }
 
+    .card.quiz-layout {
+      max-width: 560px;
+      padding: 1.75rem;
+    }
+
     .card h1 {
       font-size: 0.875rem;
       font-weight: 600;
@@ -48,15 +53,136 @@
       margin-bottom: 0.5rem;
     }
 
-    .timer {
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: #667eea;
-      margin-bottom: 1rem;
+    .timer-row .progress {
+      margin-bottom: 0;
+      text-align: left;
+      flex: 1;
     }
 
-    .timer.urgent {
+    .timer-track {
+      height: 12px;
+      background: #ececf4;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 0.35rem;
+    }
+
+    .timer-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      transition: width 7s linear;
+    }
+
+    .timer-fill.urgent {
+      background: linear-gradient(90deg, #dc2626, #f97316);
+    }
+
+    .timer-fill.paused {
+      transition: none;
+    }
+
+    .timer-top {
+      margin-bottom: 0.75rem;
+    }
+
+    .timer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .timer-label {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: #667eea;
+      white-space: nowrap;
+    }
+
+    .timer-label.urgent {
       color: #dc2626;
+    }
+
+    .potential-points {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #16a34a;
+      margin-bottom: 0.5rem;
+    }
+
+    .potential-points.urgent {
+      color: #dc2626;
+    }
+
+    .quiz-body {
+      display: flex;
+      gap: 1.25rem;
+      align-items: stretch;
+    }
+
+    .quiz-main {
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+    }
+
+    .score-sidebar {
+      width: 3.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 0.25rem;
+    }
+
+    .score-sidebar-title {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+    }
+
+    .score-track-vertical {
+      flex: 1;
+      min-height: 220px;
+      width: 14px;
+      background: #ececf4;
+      border-radius: 999px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .score-fill-vertical {
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(180deg, #16a34a, #667eea);
+      border-radius: 999px;
+      transition: height 0.45s ease-out;
+    }
+
+    .score-fill-vertical.bump {
+      filter: brightness(1.15);
+    }
+
+    .live-score {
+      font-size: 0.875rem;
+      font-weight: 800;
+      color: #667eea;
+      margin-top: 0.5rem;
+      line-height: 1.2;
+    }
+
+    .max-score-hint {
+      font-size: 0.6875rem;
+      color: #9ca3af;
+      margin-top: 0.15rem;
     }
 
     .card .question {
@@ -242,7 +368,7 @@
   </style>
 </head>
 <body>
-  <div class="card">
+  <div id="card" class="card">
     <div id="topic-screen" class="topic-screen">
       <h1>Quiz Cream</h1>
       <p class="subtitle">Choose a topic. You'll get 7 random questions from the database.</p>
@@ -251,18 +377,40 @@
     </div>
 
     <div id="quiz-screen" class="quiz-screen hidden">
-      <h1>Trivia</h1>
-      <p id="progress" class="progress"></p>
-      <p id="timer" class="timer">7s</p>
-      <p id="question" class="question"></p>
-      <div id="options" class="options"></div>
-      <p id="feedback" class="feedback"></p>
-      <button id="next-btn" class="next-btn hidden" onclick="nextQuestion()">Next Question</button>
+      <div class="timer-top">
+        <div class="timer-row">
+          <span class="progress" id="progress"></span>
+          <span id="timer-label" class="timer-label">7.0s</span>
+        </div>
+        <div class="timer-track">
+          <div id="timer-fill" class="timer-fill"></div>
+        </div>
+        <p id="potential-points" class="potential-points">+1000 pts if correct now</p>
+      </div>
+
+      <div class="quiz-body">
+        <div class="quiz-main">
+          <h1>Trivia</h1>
+          <p id="question" class="question"></p>
+          <div id="options" class="options"></div>
+          <p id="feedback" class="feedback"></p>
+          <button id="next-btn" class="next-btn hidden" onclick="nextQuestion()">Next Question</button>
+        </div>
+
+        <aside class="score-sidebar">
+          <span class="score-sidebar-title">Score</span>
+          <div class="score-track-vertical">
+            <div id="score-fill" class="score-fill-vertical"></div>
+          </div>
+          <p id="live-score" class="live-score">0</p>
+          <p id="max-score-hint" class="max-score-hint">/ 7000</p>
+        </aside>
+      </div>
     </div>
 
     <div id="score-screen" class="score-screen hidden">
       <h1>Quiz Complete</h1>
-      <p class="score-message">Here's how you did:</p>
+      <p class="score-message">Total score</p>
       <p id="score-value" class="score-value"></p>
       <p id="score-label" class="score-label"></p>
       <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
@@ -271,7 +419,9 @@
 
   <script>
     const API_BASE = 'http://localhost:3001';
-    const TIME_LIMIT = 7;
+    const TIME_LIMIT_MS = 7000;
+    const MAX_POINTS = 1000;
+    const POINTS_PER_MS = MAX_POINTS / TIME_LIMIT_MS;
     const QUESTION_COUNT = 7;
 
     let questions = [];
@@ -279,20 +429,123 @@
     let currentIndex = 0;
     let answered = false;
     let correctCount = 0;
-    let timeLeft = TIME_LIMIT;
-    let timerInterval = null;
+    let totalScore = 0;
+    let questionStartedAt = 0;
+    let rafId = null;
+    let timeoutId = null;
+
+    function getTimeLeftMs(elapsedMs) {
+      return Math.max(0, TIME_LIMIT_MS - elapsedMs);
+    }
+
+    function calculatePoints(timeLeftMs) {
+      return Math.round(timeLeftMs * POINTS_PER_MS);
+    }
+
+    function scoreAnswer(isCorrect, elapsedMs) {
+      if (!isCorrect) return 0;
+      return calculatePoints(getTimeLeftMs(elapsedMs));
+    }
+
+    function getPotentialPoints(timeLeftMs) {
+      return calculatePoints(timeLeftMs);
+    }
+
+    function updateLiveScore(animateBump = false) {
+      const maxPossible = getMaxPossibleScore() || QUESTION_COUNT * MAX_POINTS;
+      const percent = Math.min(100, (totalScore / maxPossible) * 100);
+      const fill = document.getElementById('score-fill');
+
+      fill.style.height = `${percent}%`;
+      document.getElementById('live-score').textContent = totalScore.toLocaleString();
+      document.getElementById('max-score-hint').textContent = `/ ${maxPossible.toLocaleString()}`;
+
+      if (animateBump) {
+        fill.classList.add('bump');
+        setTimeout(() => fill.classList.remove('bump'), 450);
+      }
+    }
+
+    function getMaxPossibleScore() {
+      return questions.length * MAX_POINTS;
+    }
+
+    function formatTimeDisplay(timeLeftMs) {
+      return `${(timeLeftMs / 1000).toFixed(1)}s`;
+    }
+
+    function updatePotentialPoints(timeLeftMs) {
+      const potentialEl = document.getElementById('potential-points');
+      const points = getPotentialPoints(timeLeftMs);
+      potentialEl.textContent = `+${points} pts if correct now`;
+      potentialEl.classList.toggle('urgent', timeLeftMs <= 3000);
+    }
 
     function clearTimer() {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
       }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    }
+
+    function freezeTimerBar() {
+      const fill = document.getElementById('timer-fill');
+      const elapsed = Date.now() - questionStartedAt;
+      const percentLeft = Math.max(0, 100 * (1 - elapsed / TIME_LIMIT_MS));
+
+      fill.classList.add('paused');
+      fill.style.transition = 'none';
+      fill.style.width = `${percentLeft}%`;
+    }
+
+    function updateTimerLabel(timeLeftMs) {
+      const label = document.getElementById('timer-label');
+      label.textContent = formatTimeDisplay(timeLeftMs);
+
+      const isUrgent = timeLeftMs <= 3000;
+      label.classList.toggle('urgent', isUrgent);
+      document.getElementById('timer-fill').classList.toggle('urgent', isUrgent);
+      updatePotentialPoints(timeLeftMs);
+    }
+
+    function tickTimer() {
+      if (answered) return;
+
+      const elapsed = Date.now() - questionStartedAt;
+      const timeLeftMs = Math.max(0, TIME_LIMIT_MS - elapsed);
+      updateTimerLabel(timeLeftMs);
+
+      if (timeLeftMs > 0) {
+        rafId = requestAnimationFrame(tickTimer);
+      }
+    }
+
+    function startTimer() {
+      clearTimer();
+      questionStartedAt = Date.now();
+
+      const fill = document.getElementById('timer-fill');
+      fill.classList.remove('paused', 'urgent');
+      fill.style.transition = 'none';
+      fill.style.width = '100%';
+      fill.offsetHeight;
+      fill.style.transition = `width ${TIME_LIMIT_MS}ms linear`;
+      fill.style.width = '0%';
+
+      updateTimerLabel(TIME_LIMIT_MS);
+      timeoutId = setTimeout(handleTimeout, TIME_LIMIT_MS);
+      rafId = requestAnimationFrame(tickTimer);
     }
 
     function showScreen(screenId) {
       ['topic-screen', 'quiz-screen', 'score-screen'].forEach((id) => {
         document.getElementById(id).classList.toggle('hidden', id !== screenId);
       });
+      document.getElementById('card').classList.toggle('quiz-layout', screenId === 'quiz-screen');
     }
 
     async function loadTopics() {
@@ -336,35 +589,15 @@
         selectedTopicName = topicName;
         currentIndex = 0;
         correctCount = 0;
+        totalScore = 0;
         answered = false;
 
         showScreen('quiz-screen');
+        updateLiveScore(false);
         loadQuestion();
       } catch (error) {
         errorEl.textContent = error.message;
       }
-    }
-
-    function updateTimerDisplay() {
-      const timerEl = document.getElementById('timer');
-      timerEl.textContent = `${timeLeft}s`;
-      timerEl.classList.toggle('urgent', timeLeft <= 3);
-    }
-
-    function startTimer() {
-      clearTimer();
-      timeLeft = TIME_LIMIT;
-      updateTimerDisplay();
-
-      timerInterval = setInterval(() => {
-        timeLeft -= 1;
-        updateTimerDisplay();
-
-        if (timeLeft <= 0) {
-          clearTimer();
-          handleTimeout();
-        }
-      }, 1000);
     }
 
     function revealAnswer(selectedIndex) {
@@ -372,6 +605,15 @@
       const feedback = document.getElementById('feedback');
       const buttons = document.querySelectorAll('.options button');
       const isCorrect = selectedIndex === q.correctIndex;
+      const elapsedMs = Date.now() - questionStartedAt;
+      const timeLeftMs = getTimeLeftMs(elapsedMs);
+      const points = scoreAnswer(isCorrect, elapsedMs);
+
+      freezeTimerBar();
+      clearTimer();
+      document.getElementById('potential-points').textContent = isCorrect
+        ? `+${points} pts earned`
+        : '+0 pts this question';
 
       buttons.forEach((btn, index) => {
         btn.disabled = true;
@@ -384,13 +626,15 @@
 
       if (isCorrect) {
         correctCount += 1;
-        feedback.textContent = 'Correct!';
+        totalScore += points;
+        updateLiveScore(true);
+        feedback.textContent = `Correct! +${points} pts`;
         feedback.className = 'feedback correct';
       } else if (selectedIndex !== null) {
-        feedback.textContent = 'Wrong!';
+        feedback.textContent = 'Wrong! +0 pts';
         feedback.className = 'feedback wrong';
       } else {
-        feedback.textContent = "Time's up!";
+        feedback.textContent = "Time's up! +0 pts";
         feedback.className = 'feedback wrong';
       }
 
@@ -404,7 +648,7 @@
       answered = false;
 
       document.getElementById('progress').textContent =
-        `${selectedTopicName} — Question ${currentIndex + 1} of ${questions.length}`;
+        `${selectedTopicName} · Q${currentIndex + 1}/${questions.length}`;
       document.getElementById('question').textContent = q.text;
       document.getElementById('feedback').textContent = '';
       document.getElementById('feedback').className = 'feedback';
@@ -426,7 +670,6 @@
     function checkAnswer(selectedIndex) {
       if (answered) return;
       answered = true;
-      clearTimer();
       revealAnswer(selectedIndex);
     }
 
@@ -449,16 +692,16 @@
     function showScore() {
       clearTimer();
       showScreen('score-screen');
-      document.getElementById('score-value').textContent =
-        `${correctCount} / ${questions.length}`;
+      document.getElementById('score-value').textContent = totalScore.toLocaleString();
       document.getElementById('score-label').textContent =
-        `${correctCount} correct out of ${questions.length} questions in ${selectedTopicName}`;
+        `${correctCount} / ${questions.length} correct in ${selectedTopicName}`;
     }
 
     function restartQuiz() {
       clearTimer();
       currentIndex = 0;
       correctCount = 0;
+      totalScore = 0;
       answered = false;
       questions = [];
       showScreen('topic-screen');
