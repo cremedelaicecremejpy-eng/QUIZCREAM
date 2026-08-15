@@ -127,7 +127,12 @@ export class MatchManager {
 
     Object.keys(match.players).forEach((otherSocketId) => {
       if (otherSocketId !== socketId) {
-        this.io.to(otherSocketId).emit('opponent:answered');
+        this.io.to(otherSocketId).emit('opponent:answered', {
+          opponentScore: player.score,
+          points,
+          isCorrect,
+          opponentNickname: player.nickname
+        });
       }
     });
 
@@ -168,6 +173,7 @@ export class MatchManager {
         totalQuestions: match.questions.length,
         correctIndex: question.correctIndex,
         yourAnswer: player.lastAnswer,
+        opponentAnswer: opponent.lastAnswer,
         yourScore: player.score,
         yourCorrectCount: player.correctCount,
         opponentScore: opponent.score,

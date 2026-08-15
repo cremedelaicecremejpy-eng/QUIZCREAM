@@ -253,6 +253,26 @@
       opacity: 1;
     }
 
+    .options button.opponent-pick {
+      position: relative;
+    }
+
+    .options button.opponent-pick-correct {
+      box-shadow: inset 0 0 0 2px #764ba2;
+    }
+
+    .options button.opponent-pick-wrong {
+      box-shadow: inset 0 0 0 2px #f97316;
+      border-style: dashed;
+    }
+
+    .opponent-pick-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #764ba2;
+      margin-top: 0.75rem;
+    }
+
     .feedback {
       margin-top: 1.5rem;
       font-size: 1.25rem;
@@ -266,6 +286,10 @@
 
     .feedback.wrong {
       color: #dc2626;
+    }
+
+    .feedback.opponent-scored {
+      color: #764ba2;
     }
 
     .next-btn {
@@ -555,6 +579,7 @@
           <p id="question" class="question"></p>
           <div id="options" class="options"></div>
           <p id="feedback" class="feedback"></p>
+          <p id="opponent-pick-label" class="opponent-pick-label hidden"></p>
           <button id="next-btn" class="next-btn hidden" onclick="nextQuestion()">Next Question</button>
         </div>
 
@@ -662,9 +687,23 @@
           loadQuestion(data.startedAt);
         });
 
-        socket.on('opponent:answered', () => {
-          if (gameMode !== 'multiplayer' || !answered) return;
-          document.getElementById('feedback').textContent = 'Opponent answered — waiting for round...';
+        socket.on('opponent:answered', (data) => {
+          if (gameMode !== 'multiplayer') return;
+
+          opponentScore = data.opponentScore;
+          updateOpponentScore(data.isCorrect);
+
+          if (data.isCorrect) {
+            document.getElementById('feedback').textContent =
+              `${data.opponentNickname} scored +${data.points} pts!`;
+            document.getElementById('feedback').className = 'feedback opponent-scored';
+          } else if (answered) {
+            document.getElementById('feedback').textContent = `${data.opponentNickname} answered — waiting for round...`;
+            document.getElementById('feedback').className = 'feedback';
+          } else {
+            document.getElementById('feedback').textContent = `${data.opponentNickname} locked in an answer`;
+            document.getElementById('feedback').className = 'feedback';
+          }
         });
 
         socket.on('round:end', (data) => {
@@ -674,12 +713,14 @@
           correctCount = data.yourCorrectCount;
           opponentScore = data.opponentScore;
           updateLiveScore(true);
-          updateOpponentScore(true);
+          updateOpponentScore(false);
           revealAnswer(data.yourAnswer.selectedIndex, {
             isCorrect: data.yourAnswer.isCorrect,
             points: data.yourAnswer.points,
             correctIndex: data.correctIndex,
-            timedOut: data.yourAnswer.selectedIndex === null
+            timedOut: data.yourAnswer.selectedIndex === null,
+            opponentAnswer: data.opponentAnswer,
+            opponentNickname: data.opponentNickname
           });
         });
 
@@ -948,21 +989,42 @@
       showScreen('topic-screen');
     }
 
+    function getOpponentPickMessage(opponentAnswer, options, name) {
+      if (opponentAnswer.selectedIndex === null) {
+        return `${name} ran out of time (+0 pts)`;
+      }
+
+      const optionText = options[opponentAnswer.selectedIndex];
+      if (opponentAnswer.isCorrect) {
+        return `${name} picked: ${optionText} (+${opponentAnswer.points} pts)`;
+      }
+
+      return `${name} picked: ${optionText} (+0 pts)`;
+    }
+
     function revealAnswer(selectedIndex, serverResult) {
       const q = gameMode === 'multiplayer' ? currentQuestion : questions[currentIndex];
       const feedback = document.getElementById('feedback');
+      const opponentPickEl = document.getElementById('opponent-pick-label');
       const buttons = document.querySelectorAll('.options button');
+
+      opponentPickEl.classList.add('hidden');
+      opponentPickEl.textContent = '';
 
       let isCorrect;
       let points;
       let correctIndex;
       let timedOut = selectedIndex === null;
+      let opponentAnswer = null;
+      let opponentName = opponentNickname;
 
       if (serverResult) {
         isCorrect = serverResult.isCorrect;
         points = serverResult.points;
         correctIndex = serverResult.correctIndex;
         timedOut = serverResult.timedOut;
+        opponentAnswer = serverResult.opponentAnswer || null;
+        opponentName = serverResult.opponentNickname || opponentNickname;
       } else {
         const elapsedMs = Date.now() - questionStartedAt;
         isCorrect = selectedIndex === q.correctIndex;
@@ -978,10 +1040,19 @@
 
       buttons.forEach((btn, index) => {
         btn.disabled = true;
+        btn.classList.remove('opponent-pick', 'opponent-pick-correct', 'opponent-pick-wrong');
+
         if (index === correctIndex) {
           btn.classList.add('selected-correct');
         } else if (selectedIndex !== null && index === selectedIndex) {
           btn.classList.add('selected-wrong');
+        }
+
+        if (gameMode === 'multiplayer' && opponentAnswer && opponentAnswer.selectedIndex === index) {
+          btn.classList.add('opponent-pick');
+          btn.classList.add(
+            opponentAnswer.isCorrect ? 'opponent-pick-correct' : 'opponent-pick-wrong'
+          );
         }
       });
 
@@ -1003,15 +1074,22 @@
         const nextBtn = document.getElementById('next-btn');
         nextBtn.textContent = currentIndex === questions.length - 1 ? 'See Results' : 'Next Question';
         nextBtn.classList.remove('hidden');
-      } else if (isCorrect) {
-        feedback.textContent = `Correct! +${points} pts`;
-        feedback.className = 'feedback correct';
-      } else if (timedOut) {
-        feedback.textContent = "Time's up! +0 pts";
-        feedback.className = 'feedback wrong';
       } else {
-        feedback.textContent = 'Wrong! +0 pts';
-        feedback.className = 'feedback wrong';
+        if (isCorrect) {
+          feedback.textContent = `Correct! +${points} pts`;
+          feedback.className = 'feedback correct';
+        } else if (timedOut) {
+          feedback.textContent = "Time's up! +0 pts";
+          feedback.className = 'feedback wrong';
+        } else {
+          feedback.textContent = 'Wrong! +0 pts';
+          feedback.className = 'feedback wrong';
+        }
+
+        if (opponentAnswer) {
+          opponentPickEl.textContent = getOpponentPickMessage(opponentAnswer, q.options, opponentName);
+          opponentPickEl.classList.remove('hidden');
+        }
       }
     }
 
@@ -1024,6 +1102,8 @@
       document.getElementById('question').textContent = q.text;
       document.getElementById('feedback').textContent = '';
       document.getElementById('feedback').className = 'feedback';
+      document.getElementById('opponent-pick-label').classList.add('hidden');
+      document.getElementById('opponent-pick-label').textContent = '';
 
       if (gameMode === 'solo') {
         document.getElementById('next-btn').classList.add('hidden');
