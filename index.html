@@ -34,7 +34,7 @@
     }
 
     .card.quiz-layout {
-      max-width: 560px;
+      max-width: 720px;
       padding: 1.75rem;
     }
 
@@ -165,6 +165,18 @@
       background: linear-gradient(180deg, #16a34a, #667eea);
       border-radius: 999px;
       transition: height 0.45s ease-out;
+    }
+
+    .score-fill-opponent {
+      background: linear-gradient(180deg, #f97316, #764ba2);
+    }
+
+    .score-sidebar-opponent .live-score {
+      color: #764ba2;
+    }
+
+    .score-sidebar.hidden {
+      display: none;
     }
 
     .score-fill-vertical.bump {
@@ -365,15 +377,153 @@
       margin-top: 1rem;
       font-weight: 600;
     }
+
+    .nickname-field {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: 2px solid #ececf4;
+      border-radius: 10px;
+      margin-bottom: 1.25rem;
+      outline: none;
+    }
+
+    .nickname-field:focus {
+      border-color: #667eea;
+    }
+
+    .topic-row {
+      background: #f4f4f8;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      text-align: left;
+    }
+
+    .topic-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 0.75rem;
+    }
+
+    .topic-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .topic-actions .topic-btn {
+      flex: 1;
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .topic-btn.battle {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #ffffff;
+    }
+
+    .topic-btn.battle:hover:not(:disabled) {
+      background: linear-gradient(135deg, #5a6fd6, #6a4190);
+      border-color: transparent;
+    }
+
+    .waiting-screen.hidden,
+    .match-score-screen.hidden {
+      display: none;
+    }
+
+    .waiting-spinner {
+      font-size: 2.5rem;
+      margin: 1.5rem 0;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    .waiting-topic {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 0.5rem;
+    }
+
+    .waiting-hint {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .cancel-btn {
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #667eea;
+      background: #ffffff;
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .match-meta {
+      font-size: 0.8125rem;
+      color: #6b7280;
+      margin-bottom: 0.35rem;
+    }
+
+    .match-result {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin: 1rem 0;
+    }
+
+    .match-result.win { color: #16a34a; }
+    .match-result.lose { color: #dc2626; }
+    .match-result.draw { color: #667eea; }
+
+    .match-scores {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .match-scores div {
+      text-align: center;
+    }
+
+    .match-scores .label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .match-scores .value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #667eea;
+    }
   </style>
 </head>
 <body>
   <div id="card" class="card">
     <div id="topic-screen" class="topic-screen">
       <h1>Quiz Cream</h1>
-      <p class="subtitle">Choose a topic. You'll get 7 random questions from the database.</p>
+      <p class="subtitle">Solo practice or 1v1 battle — 7 questions, 7 seconds each.</p>
+      <input id="nickname" class="nickname-field" type="text" maxlength="20" placeholder="Your nickname" />
       <div id="topic-list" class="topic-list"></div>
       <p id="topic-error" class="error-msg"></p>
+    </div>
+
+    <div id="waiting-screen" class="waiting-screen hidden">
+      <h1>Finding Match</h1>
+      <div class="waiting-spinner">⚔️</div>
+      <p id="waiting-topic" class="waiting-topic"></p>
+      <p class="waiting-hint">Open another browser tab (or ask a friend) and queue the same topic.</p>
+      <button class="cancel-btn" onclick="cancelMatchmaking()">Cancel</button>
     </div>
 
     <div id="quiz-screen" class="quiz-screen hidden">
@@ -388,7 +538,18 @@
         <p id="potential-points" class="potential-points">+1000 pts if correct now</p>
       </div>
 
+      <p id="match-meta" class="match-meta hidden"></p>
+
       <div class="quiz-body">
+        <aside class="score-sidebar score-sidebar-you">
+          <span id="player-sidebar-title" class="score-sidebar-title">You</span>
+          <div class="score-track-vertical">
+            <div id="score-fill" class="score-fill-vertical"></div>
+          </div>
+          <p id="live-score" class="live-score">0</p>
+          <p id="max-score-hint" class="max-score-hint">/ 7000</p>
+        </aside>
+
         <div class="quiz-main">
           <h1>Trivia</h1>
           <p id="question" class="question"></p>
@@ -397,15 +558,31 @@
           <button id="next-btn" class="next-btn hidden" onclick="nextQuestion()">Next Question</button>
         </div>
 
-        <aside class="score-sidebar">
-          <span class="score-sidebar-title">Score</span>
+        <aside id="opponent-sidebar" class="score-sidebar score-sidebar-opponent hidden">
+          <span id="opponent-sidebar-title" class="score-sidebar-title">Opponent</span>
           <div class="score-track-vertical">
-            <div id="score-fill" class="score-fill-vertical"></div>
+            <div id="opponent-score-fill" class="score-fill-vertical score-fill-opponent"></div>
           </div>
-          <p id="live-score" class="live-score">0</p>
-          <p id="max-score-hint" class="max-score-hint">/ 7000</p>
+          <p id="opponent-live-score" class="live-score">0</p>
+          <p id="opponent-max-score-hint" class="max-score-hint">/ 7000</p>
         </aside>
       </div>
+    </div>
+
+    <div id="match-score-screen" class="match-score-screen hidden">
+      <h1>Battle Over</h1>
+      <p id="match-result" class="match-result"></p>
+      <div class="match-scores">
+        <div>
+          <p class="label">You</p>
+          <p id="match-your-score" class="value">0</p>
+        </div>
+        <div>
+          <p id="match-opponent-label" class="label">Opponent</p>
+          <p id="match-opponent-score" class="value">0</p>
+        </div>
+      </div>
+      <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
     </div>
 
     <div id="score-screen" class="score-screen hidden">
@@ -417,22 +594,137 @@
     </div>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script>
-    const API_BASE = 'http://localhost:3001';
+    const API_BASE = window.location.origin;
     const TIME_LIMIT_MS = 7000;
     const MAX_POINTS = 1000;
     const POINTS_PER_MS = MAX_POINTS / TIME_LIMIT_MS;
     const QUESTION_COUNT = 7;
 
+    let socket = null;
+    let gameMode = 'solo';
     let questions = [];
+    let currentQuestion = null;
     let selectedTopicName = '';
+    let selectedTopicId = '';
+    let opponentNickname = '';
+    let opponentScore = 0;
     let currentIndex = 0;
+    let totalQuestions = QUESTION_COUNT;
     let answered = false;
     let correctCount = 0;
     let totalScore = 0;
     let questionStartedAt = 0;
     let rafId = null;
     let timeoutId = null;
+
+    function getNickname() {
+      const value = document.getElementById('nickname').value.trim();
+      return value.slice(0, 20) || 'Player';
+    }
+
+    function ensureSocket() {
+      if (!socket) {
+        socket = io(API_BASE);
+
+        socket.on('queue:waiting', ({ topicName }) => {
+          document.getElementById('waiting-topic').textContent = `Topic: ${topicName}`;
+          showScreen('waiting-screen');
+        });
+
+        socket.on('match:found', ({ opponentNickname: name, topicName }) => {
+          gameMode = 'multiplayer';
+          opponentNickname = name;
+          selectedTopicName = topicName;
+          totalScore = 0;
+          correctCount = 0;
+          opponentScore = 0;
+          setMultiplayerUi(true);
+          updateLiveScore(false);
+          updateOpponentScore(false);
+        });
+
+        socket.on('round:start', (data) => {
+          gameMode = 'multiplayer';
+          currentIndex = data.questionIndex;
+          totalQuestions = data.totalQuestions;
+          selectedTopicName = data.topicName;
+          currentQuestion = data.question;
+          totalScore = data.scores.you;
+          opponentScore = data.scores.opponent;
+          answered = false;
+
+          showScreen('quiz-screen');
+          setMultiplayerUi(true);
+          updateLiveScore(false);
+          updateOpponentScore();
+          loadQuestion(data.startedAt);
+        });
+
+        socket.on('opponent:answered', () => {
+          if (gameMode !== 'multiplayer' || !answered) return;
+          document.getElementById('feedback').textContent = 'Opponent answered — waiting for round...';
+        });
+
+        socket.on('round:end', (data) => {
+          if (gameMode !== 'multiplayer') return;
+
+          totalScore = data.yourScore;
+          correctCount = data.yourCorrectCount;
+          opponentScore = data.opponentScore;
+          updateLiveScore(true);
+          updateOpponentScore(true);
+          revealAnswer(data.yourAnswer.selectedIndex, {
+            isCorrect: data.yourAnswer.isCorrect,
+            points: data.yourAnswer.points,
+            correctIndex: data.correctIndex,
+            timedOut: data.yourAnswer.selectedIndex === null
+          });
+        });
+
+        socket.on('match:end', (data) => {
+          clearTimer();
+          showMatchScore(data);
+        });
+
+        socket.on('error', ({ message }) => {
+          document.getElementById('topic-error').textContent = message;
+          showScreen('topic-screen');
+        });
+      }
+
+      return socket;
+    }
+
+    function setMultiplayerUi(enabled) {
+      document.getElementById('match-meta').classList.toggle('hidden', !enabled);
+      document.getElementById('opponent-sidebar').classList.toggle('hidden', !enabled);
+      document.getElementById('next-btn').classList.toggle('hidden', enabled);
+
+      document.getElementById('player-sidebar-title').textContent = enabled ? getNickname() : 'You';
+
+      if (enabled) {
+        document.getElementById('match-meta').textContent =
+          `${selectedTopicName} · vs ${opponentNickname}`;
+        document.getElementById('opponent-sidebar-title').textContent = opponentNickname;
+      }
+    }
+
+    function updateOpponentScore(animateBump = false) {
+      const maxPossible = getMaxPossibleScore() || QUESTION_COUNT * MAX_POINTS;
+      const percent = Math.min(100, (opponentScore / maxPossible) * 100);
+      const fill = document.getElementById('opponent-score-fill');
+
+      fill.style.height = `${percent}%`;
+      document.getElementById('opponent-live-score').textContent = opponentScore.toLocaleString();
+      document.getElementById('opponent-max-score-hint').textContent = `/ ${maxPossible.toLocaleString()}`;
+
+      if (animateBump) {
+        fill.classList.add('bump');
+        setTimeout(() => fill.classList.remove('bump'), 450);
+      }
+    }
 
     function getTimeLeftMs(elapsedMs) {
       return Math.max(0, TIME_LIMIT_MS - elapsedMs);
@@ -467,7 +759,8 @@
     }
 
     function getMaxPossibleScore() {
-      return questions.length * MAX_POINTS;
+      const count = gameMode === 'multiplayer' ? totalQuestions : questions.length;
+      return count * MAX_POINTS;
     }
 
     function formatTimeDisplay(timeLeftMs) {
@@ -524,25 +817,36 @@
       }
     }
 
-    function startTimer() {
+    function startTimer(serverStartedAt) {
       clearTimer();
-      questionStartedAt = Date.now();
+      questionStartedAt = serverStartedAt || Date.now();
 
       const fill = document.getElementById('timer-fill');
       fill.classList.remove('paused', 'urgent');
       fill.style.transition = 'none';
-      fill.style.width = '100%';
+
+      const elapsed = Date.now() - questionStartedAt;
+      const percentLeft = Math.max(0, 100 * (1 - elapsed / TIME_LIMIT_MS));
+      fill.style.width = `${percentLeft}%`;
       fill.offsetHeight;
-      fill.style.transition = `width ${TIME_LIMIT_MS}ms linear`;
+
+      const remainingMs = Math.max(0, TIME_LIMIT_MS - elapsed);
+      fill.style.transition = `width ${remainingMs}ms linear`;
       fill.style.width = '0%';
 
-      updateTimerLabel(TIME_LIMIT_MS);
-      timeoutId = setTimeout(handleTimeout, TIME_LIMIT_MS);
-      rafId = requestAnimationFrame(tickTimer);
+      updateTimerLabel(remainingMs);
+
+      if (gameMode === 'solo') {
+        timeoutId = setTimeout(handleTimeout, remainingMs);
+      }
+
+      if (remainingMs > 0) {
+        rafId = requestAnimationFrame(tickTimer);
+      }
     }
 
     function showScreen(screenId) {
-      ['topic-screen', 'quiz-screen', 'score-screen'].forEach((id) => {
+      ['topic-screen', 'waiting-screen', 'quiz-screen', 'score-screen', 'match-score-screen'].forEach((id) => {
         document.getElementById(id).classList.toggle('hidden', id !== screenId);
       });
       document.getElementById('card').classList.toggle('quiz-layout', screenId === 'quiz-screen');
@@ -562,11 +866,31 @@
         topicList.innerHTML = '';
 
         topics.forEach((topic) => {
-          const btn = document.createElement('button');
-          btn.className = 'topic-btn';
-          btn.textContent = `${topic.name} (${topic._count.questions} questions)`;
-          btn.onclick = () => startQuiz(topic.id, topic.name);
-          topicList.appendChild(btn);
+          const row = document.createElement('div');
+          row.className = 'topic-row';
+
+          const name = document.createElement('p');
+          name.className = 'topic-name';
+          name.textContent = `${topic.name} (${topic._count.questions} questions)`;
+
+          const actions = document.createElement('div');
+          actions.className = 'topic-actions';
+
+          const soloBtn = document.createElement('button');
+          soloBtn.className = 'topic-btn';
+          soloBtn.textContent = 'Solo Play';
+          soloBtn.onclick = () => startQuiz(topic.id, topic.name);
+
+          const battleBtn = document.createElement('button');
+          battleBtn.className = 'topic-btn battle';
+          battleBtn.textContent = 'Find Match';
+          battleBtn.onclick = () => findMatch(topic.id, topic.name);
+
+          actions.appendChild(soloBtn);
+          actions.appendChild(battleBtn);
+          row.appendChild(name);
+          row.appendChild(actions);
+          topicList.appendChild(row);
         });
       } catch (error) {
         topicList.innerHTML = '';
@@ -578,6 +902,8 @@
     async function startQuiz(topicId, topicName) {
       const errorEl = document.getElementById('topic-error');
       errorEl.textContent = '';
+      gameMode = 'solo';
+      setMultiplayerUi(false);
 
       try {
         const response = await fetch(
@@ -587,12 +913,16 @@
 
         questions = await response.json();
         selectedTopicName = topicName;
+        selectedTopicId = topicId;
         currentIndex = 0;
+        totalQuestions = questions.length;
         correctCount = 0;
         totalScore = 0;
         answered = false;
 
         showScreen('quiz-screen');
+        setMultiplayerUi(false);
+        document.getElementById('player-sidebar-title').textContent = getNickname();
         updateLiveScore(false);
         loadQuestion();
       } catch (error) {
@@ -600,14 +930,45 @@
       }
     }
 
-    function revealAnswer(selectedIndex) {
-      const q = questions[currentIndex];
+    function findMatch(topicId, topicName) {
+      const errorEl = document.getElementById('topic-error');
+      errorEl.textContent = '';
+      selectedTopicId = topicId;
+      selectedTopicName = topicName;
+
+      ensureSocket().emit('queue:join', {
+        topicId,
+        topicName,
+        nickname: getNickname()
+      });
+    }
+
+    function cancelMatchmaking() {
+      if (socket) socket.emit('queue:leave');
+      showScreen('topic-screen');
+    }
+
+    function revealAnswer(selectedIndex, serverResult) {
+      const q = gameMode === 'multiplayer' ? currentQuestion : questions[currentIndex];
       const feedback = document.getElementById('feedback');
       const buttons = document.querySelectorAll('.options button');
-      const isCorrect = selectedIndex === q.correctIndex;
-      const elapsedMs = Date.now() - questionStartedAt;
-      const timeLeftMs = getTimeLeftMs(elapsedMs);
-      const points = scoreAnswer(isCorrect, elapsedMs);
+
+      let isCorrect;
+      let points;
+      let correctIndex;
+      let timedOut = selectedIndex === null;
+
+      if (serverResult) {
+        isCorrect = serverResult.isCorrect;
+        points = serverResult.points;
+        correctIndex = serverResult.correctIndex;
+        timedOut = serverResult.timedOut;
+      } else {
+        const elapsedMs = Date.now() - questionStartedAt;
+        isCorrect = selectedIndex === q.correctIndex;
+        points = scoreAnswer(isCorrect, elapsedMs);
+        correctIndex = q.correctIndex;
+      }
 
       freezeTimerBar();
       clearTimer();
@@ -617,42 +978,56 @@
 
       buttons.forEach((btn, index) => {
         btn.disabled = true;
-        if (index === q.correctIndex) {
+        if (index === correctIndex) {
           btn.classList.add('selected-correct');
         } else if (selectedIndex !== null && index === selectedIndex) {
           btn.classList.add('selected-wrong');
         }
       });
 
-      if (isCorrect) {
-        correctCount += 1;
-        totalScore += points;
-        updateLiveScore(true);
+      if (gameMode === 'solo') {
+        if (isCorrect) {
+          correctCount += 1;
+          totalScore += points;
+          updateLiveScore(true);
+          feedback.textContent = `Correct! +${points} pts`;
+          feedback.className = 'feedback correct';
+        } else if (selectedIndex !== null) {
+          feedback.textContent = 'Wrong! +0 pts';
+          feedback.className = 'feedback wrong';
+        } else {
+          feedback.textContent = "Time's up! +0 pts";
+          feedback.className = 'feedback wrong';
+        }
+
+        const nextBtn = document.getElementById('next-btn');
+        nextBtn.textContent = currentIndex === questions.length - 1 ? 'See Results' : 'Next Question';
+        nextBtn.classList.remove('hidden');
+      } else if (isCorrect) {
         feedback.textContent = `Correct! +${points} pts`;
         feedback.className = 'feedback correct';
-      } else if (selectedIndex !== null) {
-        feedback.textContent = 'Wrong! +0 pts';
-        feedback.className = 'feedback wrong';
-      } else {
+      } else if (timedOut) {
         feedback.textContent = "Time's up! +0 pts";
         feedback.className = 'feedback wrong';
+      } else {
+        feedback.textContent = 'Wrong! +0 pts';
+        feedback.className = 'feedback wrong';
       }
-
-      const nextBtn = document.getElementById('next-btn');
-      nextBtn.textContent = currentIndex === questions.length - 1 ? 'See Results' : 'Next Question';
-      nextBtn.classList.remove('hidden');
     }
 
-    function loadQuestion() {
-      const q = questions[currentIndex];
+    function loadQuestion(serverStartedAt) {
+      const q = gameMode === 'multiplayer' ? currentQuestion : questions[currentIndex];
       answered = false;
 
       document.getElementById('progress').textContent =
-        `${selectedTopicName} · Q${currentIndex + 1}/${questions.length}`;
+        `${selectedTopicName} · Q${currentIndex + 1}/${totalQuestions}`;
       document.getElementById('question').textContent = q.text;
       document.getElementById('feedback').textContent = '';
       document.getElementById('feedback').className = 'feedback';
-      document.getElementById('next-btn').classList.add('hidden');
+
+      if (gameMode === 'solo') {
+        document.getElementById('next-btn').classList.add('hidden');
+      }
 
       const optionsEl = document.getElementById('options');
       optionsEl.innerHTML = '';
@@ -664,17 +1039,30 @@
         optionsEl.appendChild(btn);
       });
 
-      startTimer();
+      startTimer(serverStartedAt);
     }
 
     function checkAnswer(selectedIndex) {
       if (answered) return;
       answered = true;
+
+      if (gameMode === 'multiplayer') {
+        freezeTimerBar();
+        clearTimer();
+        document.querySelectorAll('.options button').forEach((btn) => {
+          btn.disabled = true;
+        });
+        document.getElementById('feedback').textContent = 'Locked in! Waiting for round...';
+        document.getElementById('feedback').className = 'feedback';
+        ensureSocket().emit('answer:submit', { selectedIndex });
+        return;
+      }
+
       revealAnswer(selectedIndex);
     }
 
     function handleTimeout() {
-      if (answered) return;
+      if (answered || gameMode !== 'solo') return;
       answered = true;
       revealAnswer(null);
     }
@@ -689,6 +1077,30 @@
       loadQuestion();
     }
 
+    function showMatchScore(data) {
+      opponentNickname = data.opponentNickname || opponentNickname;
+      showScreen('match-score-screen');
+
+      const resultEl = document.getElementById('match-result');
+      if (data.forfeit) {
+        resultEl.textContent = 'You win — opponent left';
+        resultEl.className = 'match-result win';
+      } else if (data.isDraw) {
+        resultEl.textContent = "It's a draw!";
+        resultEl.className = 'match-result draw';
+      } else if (data.youWin) {
+        resultEl.textContent = 'You win!';
+        resultEl.className = 'match-result win';
+      } else {
+        resultEl.textContent = 'You lose';
+        resultEl.className = 'match-result lose';
+      }
+
+      document.getElementById('match-your-score').textContent = data.yourScore.toLocaleString();
+      document.getElementById('match-opponent-label').textContent = opponentNickname;
+      document.getElementById('match-opponent-score').textContent = data.opponentScore.toLocaleString();
+    }
+
     function showScore() {
       clearTimer();
       showScreen('score-screen');
@@ -699,11 +1111,17 @@
 
     function restartQuiz() {
       clearTimer();
+      if (socket) socket.emit('queue:leave');
+
+      gameMode = 'solo';
       currentIndex = 0;
       correctCount = 0;
       totalScore = 0;
+      opponentScore = 0;
       answered = false;
       questions = [];
+      currentQuestion = null;
+      setMultiplayerUi(false);
       showScreen('topic-screen');
       loadTopics();
     }
