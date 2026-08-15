@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch index.js",
-    "build": "prisma generate && prisma migrate deploy",
-    "start": "node index.js",
+    "build": "prisma generate",
+    "start": "prisma migrate deploy && node index.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma generate && node prisma/seed.js",
@@ -18,15 +18,13 @@
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
-    "@prisma/client": "^6.5.0",
+    "@prisma/client": "6.19.3",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "prisma": "6.19.3",
     "socket.io": "^4.8.3"
-  },
-  "devDependencies": {
-    "prisma": "^6.5.0"
   }
 }
