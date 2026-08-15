@@ -14,7 +14,7 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.join(__dirname, '..');
+const publicDir = path.join(__dirname, 'public');
 
 const app = express();
 const server = http.createServer(app);
@@ -27,7 +27,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(rootDir));
+app.use(express.static(publicDir));
 
 app.get('/api/health', async (_req, res) => {
   try {
@@ -63,7 +63,7 @@ app.get('/api/topics/:topicId/questions/random', async (req, res) => {
 });
 
 app.get('/', (_req, res) => {
-  res.sendFile(path.join(rootDir, 'index.html'));
+  res.sendFile(path.join(publicDir, 'index.html'));
 });
 
 io.on('connection', (socket) => {
