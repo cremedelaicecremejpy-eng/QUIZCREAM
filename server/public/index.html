@@ -660,13 +660,205 @@
       font-weight: 800;
       color: #667eea;
     }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: 2px solid #ececf4;
+      border-radius: 10px;
+      background: #f8f8fc;
+      color: #6b7280;
+      cursor: pointer;
+    }
+
+    .auth-tab.active {
+      border-color: #667eea;
+      background: #ffffff;
+      color: #667eea;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      text-align: left;
+      margin-bottom: 1rem;
+    }
+
+    .auth-form label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .auth-form input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: 2px solid #ececf4;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .auth-form input:focus {
+      border-color: #667eea;
+    }
+
+    .auth-submit {
+      margin-top: 0.25rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #ffffff;
+      background: #667eea;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1rem 0;
+      color: #9ca3af;
+      font-size: 0.8125rem;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #ececf4;
+    }
+
+    #google-signin-btn {
+      display: flex;
+      justify-content: center;
+      min-height: 44px;
+    }
+
+    .guest-btn {
+      margin-top: 0.75rem;
+      background: transparent;
+      border: none;
+      color: #667eea;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .user-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      background: #f4f4f8;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+
+    .user-bar-info {
+      font-size: 0.875rem;
+      color: #374151;
+      line-height: 1.4;
+    }
+
+    .user-bar-info strong {
+      color: #667eea;
+    }
+
+    .logout-btn {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #667eea;
+      background: #ffffff;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .guest-note {
+      font-size: 0.8125rem;
+      color: #6b7280;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
   <div id="card" class="card">
-    <div id="topic-screen" class="topic-screen">
+    <div id="auth-screen" class="auth-screen">
+      <h1>Quiz Cream</h1>
+      <p class="subtitle">Sign in to save wins and match history — or play as a guest.</p>
+
+      <div class="auth-tabs">
+        <button id="auth-tab-login" class="auth-tab active" type="button" onclick="showAuthMode('login')">Sign In</button>
+        <button id="auth-tab-register" class="auth-tab" type="button" onclick="showAuthMode('register')">Create Account</button>
+      </div>
+
+      <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" autocomplete="email" required placeholder="you@example.com" />
+
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" autocomplete="current-password" required placeholder="Your password" />
+
+        <button class="auth-submit" type="submit">Sign In</button>
+      </form>
+
+      <form id="register-form" class="auth-form hidden" onsubmit="handleRegister(event)">
+        <label for="register-email">Email</label>
+        <input id="register-email" type="email" autocomplete="email" required placeholder="you@example.com" />
+
+        <label for="register-username">Username</label>
+        <input id="register-username" type="text" maxlength="20" autocomplete="username" required placeholder="Pick a username" />
+
+        <label for="register-password">Password</label>
+        <input id="register-password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters" />
+
+        <button class="auth-submit" type="submit">Create Account</button>
+      </form>
+
+      <p id="auth-error" class="error-msg"></p>
+
+      <div id="google-auth-wrap" class="hidden">
+        <div class="auth-divider">or</div>
+        <div id="google-signin-btn"></div>
+      </div>
+
+      <button class="guest-btn" type="button" onclick="continueAsGuest()">Continue as guest</button>
+    </div>
+
+    <div id="topic-screen" class="topic-screen hidden">
       <h1>Quiz Cream</h1>
       <p class="subtitle">Solo practice or 1v1 battle — 7 questions, 7 seconds each.</p>
+
+      <div id="user-bar" class="user-bar hidden">
+        <div class="user-bar-info">
+          Signed in as <strong id="user-bar-name"></strong><br />
+          <span id="user-bar-record"></span>
+        </div>
+        <button class="logout-btn" type="button" onclick="logout()">Log out</button>
+      </div>
+
+      <p id="guest-note" class="guest-note hidden">Playing as guest — wins won't be saved to an account.</p>
       <input id="nickname" class="nickname-field" type="text" maxlength="20" placeholder="Your nickname" />
       <div id="topic-list" class="topic-list"></div>
       <p id="topic-error" class="error-msg"></p>
@@ -780,8 +972,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     const API_BASE = window.location.origin;
+    const TOKEN_KEY = 'quizcream_token';
     const TIME_LIMIT_MS = 7000;
     const MAX_POINTS = 1000;
     const POINTS_PER_MS = MAX_POINTS / TIME_LIMIT_MS;
@@ -805,6 +999,233 @@
     let timeoutId = null;
     let countdownTimeoutId = null;
     let audioCtx = null;
+    let currentUser = null;
+    let isGuest = false;
+    let googleClientId = null;
+
+    function getToken() {
+      return localStorage.getItem(TOKEN_KEY);
+    }
+
+    function setToken(token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    }
+
+    function clearToken() {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+
+    function authHeaders() {
+      const token = getToken();
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    }
+
+    async function authFetch(path, options = {}) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+          ...(options.headers || {})
+        }
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed.');
+      }
+      return data;
+    }
+
+    function resetSocket() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+    }
+
+    function saveSession(token, user) {
+      setToken(token);
+      currentUser = user;
+      isGuest = false;
+      resetSocket();
+      updateTopicScreenAuth();
+    }
+
+    function clearSession() {
+      clearToken();
+      currentUser = null;
+      resetSocket();
+      updateTopicScreenAuth();
+    }
+
+    function showAuthMode(mode) {
+      document.getElementById('auth-tab-login').classList.toggle('active', mode === 'login');
+      document.getElementById('auth-tab-register').classList.toggle('active', mode === 'register');
+      document.getElementById('login-form').classList.toggle('hidden', mode !== 'login');
+      document.getElementById('register-form').classList.toggle('hidden', mode !== 'register');
+      document.getElementById('auth-error').textContent = '';
+    }
+
+    function updateTopicScreenAuth() {
+      const userBar = document.getElementById('user-bar');
+      const guestNote = document.getElementById('guest-note');
+      const nicknameField = document.getElementById('nickname');
+
+      if (currentUser) {
+        userBar.classList.remove('hidden');
+        guestNote.classList.add('hidden');
+        nicknameField.classList.add('hidden');
+        document.getElementById('user-bar-name').textContent = currentUser.username;
+        document.getElementById('user-bar-record').textContent =
+          `${currentUser.wins}W · ${currentUser.losses}L`;
+      } else if (isGuest) {
+        userBar.classList.add('hidden');
+        guestNote.classList.remove('hidden');
+        nicknameField.classList.remove('hidden');
+      } else {
+        userBar.classList.add('hidden');
+        guestNote.classList.add('hidden');
+        nicknameField.classList.remove('hidden');
+      }
+    }
+
+    async function handleRegister(event) {
+      event.preventDefault();
+      document.getElementById('auth-error').textContent = '';
+
+      try {
+        const data = await authFetch('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: document.getElementById('register-email').value,
+            username: document.getElementById('register-username').value,
+            password: document.getElementById('register-password').value
+          })
+        });
+
+        saveSession(data.token, data.user);
+        showScreen('topic-screen');
+        loadTopics();
+      } catch (error) {
+        document.getElementById('auth-error').textContent = error.message;
+      }
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      document.getElementById('auth-error').textContent = '';
+
+      try {
+        const data = await authFetch('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: document.getElementById('login-email').value,
+            password: document.getElementById('login-password').value
+          })
+        });
+
+        saveSession(data.token, data.user);
+        showScreen('topic-screen');
+        loadTopics();
+      } catch (error) {
+        document.getElementById('auth-error').textContent = error.message;
+      }
+    }
+
+    async function handleGoogleCredential(response) {
+      document.getElementById('auth-error').textContent = '';
+
+      try {
+        const data = await authFetch('/api/auth/google', {
+          method: 'POST',
+          body: JSON.stringify({ credential: response.credential })
+        });
+
+        saveSession(data.token, data.user);
+        showScreen('topic-screen');
+        loadTopics();
+      } catch (error) {
+        document.getElementById('auth-error').textContent = error.message;
+      }
+    }
+
+    function continueAsGuest() {
+      currentUser = null;
+      isGuest = true;
+      clearToken();
+      resetSocket();
+      updateTopicScreenAuth();
+      showScreen('topic-screen');
+      loadTopics();
+    }
+
+    function logout() {
+      clearSession();
+      isGuest = false;
+      showScreen('auth-screen');
+      document.getElementById('auth-error').textContent = '';
+    }
+
+    function setupGoogleSignIn() {
+      if (!googleClientId || !window.google?.accounts?.id) return;
+
+      document.getElementById('google-auth-wrap').classList.remove('hidden');
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleCredential
+      });
+
+      window.google.accounts.id.renderButton(document.getElementById('google-signin-btn'), {
+        theme: 'outline',
+        size: 'large',
+        width: 320
+      });
+    }
+
+    async function loadAuthConfig() {
+      try {
+        const config = await fetch(`${API_BASE}/api/auth/config`).then((r) => r.json());
+        googleClientId = config.googleClientId;
+
+        if (googleClientId) {
+          if (window.google?.accounts?.id) {
+            setupGoogleSignIn();
+          } else {
+            window.addEventListener('load', setupGoogleSignIn, { once: true });
+          }
+        }
+      } catch (_error) {
+        // Google sign-in stays hidden if config fails to load.
+      }
+    }
+
+    async function restoreSession() {
+      const token = getToken();
+      if (!token) return false;
+
+      try {
+        const data = await authFetch('/api/auth/me');
+        saveSession(token, data.user);
+        return true;
+      } catch (_error) {
+        clearSession();
+        return false;
+      }
+    }
+
+    async function initApp() {
+      await loadAuthConfig();
+
+      if (await restoreSession()) {
+        showScreen('topic-screen');
+        loadTopics();
+        return;
+      }
+
+      showScreen('auth-screen');
+    }
 
     function ensureAudio() {
       if (!audioCtx) {
@@ -967,13 +1388,14 @@
     }
 
     function getNickname() {
+      if (currentUser?.username) return currentUser.username;
       const value = document.getElementById('nickname').value.trim();
       return value.slice(0, 20) || 'Player';
     }
 
     function ensureSocket() {
       if (!socket) {
-        socket = io(API_BASE);
+        socket = io(API_BASE, { auth: { token: getToken() || '' } });
 
         socket.on('queue:waiting', ({ topicName }) => {
           document.getElementById('waiting-topic').textContent = `Topic: ${topicName}`;
@@ -1224,7 +1646,7 @@
     }
 
     function showScreen(screenId) {
-      ['topic-screen', 'waiting-screen', 'countdown-screen', 'quiz-screen', 'score-screen', 'match-score-screen'].forEach((id) => {
+      ['auth-screen', 'topic-screen', 'waiting-screen', 'countdown-screen', 'quiz-screen', 'score-screen', 'match-score-screen'].forEach((id) => {
         document.getElementById(id).classList.toggle('hidden', id !== screenId);
       });
       document.getElementById('card').classList.toggle('quiz-layout', screenId === 'quiz-screen');
@@ -1551,11 +1973,11 @@
       questions = [];
       currentQuestion = null;
       setMultiplayerUi(false);
-      showScreen('topic-screen');
-      loadTopics();
+      showScreen(currentUser || isGuest ? 'topic-screen' : 'auth-screen');
+      if (currentUser || isGuest) loadTopics();
     }
 
-    loadTopics();
+    initApp();
   </script>
 </body>
 </html>

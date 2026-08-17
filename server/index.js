@@ -9,6 +9,8 @@ import prisma from './lib/prisma.js';
 import { pickQuestionsForMatch } from './game/questions.js';
 import { joinQueue, leaveQueue } from './matchmaking/queue.js';
 import { MatchManager } from './game/matchManager.js';
+import authRouter from './routes/auth.js';
+import { getUserFromToken } from './middleware/auth.js';
 
 dotenv.config();
 
@@ -28,6 +30,8 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(publicDir));
+
+app.use('/api/auth', authRouter);
 
 app.get('/api/health', async (_req, res) => {
   try {
@@ -66,6 +70,16 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    socket.user = token ? await getUserFromToken(token) : null;
+  } catch (_error) {
+    socket.user = null;
+  }
+  next();
+});
+
 io.on('connection', (socket) => {
   socket.on('queue:join', async ({ topicId, topicName, nickname }) => {
     try {
@@ -74,12 +88,15 @@ io.on('connection', (socket) => {
         return;
       }
 
-      const cleanNickname = String(nickname || 'Player').trim().slice(0, 20) || 'Player';
+      const cleanNickname = socket.user?.username
+        || String(nickname || 'Player').trim().slice(0, 20)
+        || 'Player';
       const cleanTopicName = String(topicName || 'Topic');
 
       const paired = joinQueue(topicId, {
         socketId: socket.id,
-        nickname: cleanNickname
+        nickname: cleanNickname,
+        userId: socket.user?.id || null
       });
 
       if (!paired) {
