@@ -29,15 +29,18 @@ model Question {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  username  String   @unique
-  password  String?
-  googleId  String?  @unique
-  wins      Int      @default(0)
-  losses    Int      @default(0)
-  isPro     Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id                         String    @id @default(cuid())
+  email                      String    @unique
+  username                   String    @unique
+  password                   String?
+  googleId                   String?   @unique
+  emailVerified              Boolean   @default(false)
+  verificationToken          String?   @unique
+  verificationTokenExpiresAt DateTime?
+  wins                       Int       @default(0)
+  losses                     Int       @default(0)
+  isPro                      Boolean   @default(false)
+  createdAt                  DateTime  @default(now())
 
   matchesAsPlayer1 Match[] @relation("Player1")
   matchesAsPlayer2 Match[] @relation("Player2")

@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { getBearerToken, verifyToken } from '../auth/jwt.js';
+import { userPublicSelect } from '../auth/userFields.js';
 
 export async function optionalAuth(req, _res, next) {
   req.user = null;
@@ -11,16 +12,7 @@ export async function optionalAuth(req, _res, next) {
     const payload = verifyToken(token);
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        wins: true,
-        losses: true,
-        isPro: true,
-        googleId: true,
-        createdAt: true
-      }
+      select: userPublicSelect
     });
 
     if (user) req.user = user;
@@ -48,16 +40,7 @@ export async function getUserFromToken(token) {
     const payload = verifyToken(token);
     return prisma.user.findUnique({
       where: { id: payload.sub },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        wins: true,
-        losses: true,
-        isPro: true,
-        googleId: true,
-        createdAt: true
-      }
+      select: userPublicSelect
     });
   } catch (_error) {
     return null;

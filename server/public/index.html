@@ -800,6 +800,50 @@
       color: #6b7280;
       margin-bottom: 1rem;
     }
+
+    .verify-screen {
+      text-align: center;
+    }
+
+    .verify-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .verify-message {
+      font-size: 0.9375rem;
+      color: #374151;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+
+    .verify-email {
+      color: #667eea;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .verify-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .verify-secondary {
+      background: transparent;
+      border: none;
+      color: #667eea;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .auth-success {
+      color: #059669;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -837,6 +881,7 @@
       </form>
 
       <p id="auth-error" class="error-msg"></p>
+      <p id="auth-success" class="auth-success hidden"></p>
 
       <div id="google-auth-wrap" class="hidden">
         <div class="auth-divider">or</div>
@@ -844,6 +889,21 @@
       </div>
 
       <button class="guest-btn" type="button" onclick="continueAsGuest()">Continue as guest</button>
+    </div>
+
+    <div id="verify-screen" class="auth-screen verify-screen hidden">
+      <div class="verify-icon">📧</div>
+      <h1>Check your email</h1>
+      <p class="verify-message">
+        We sent a verification link to<br />
+        <span id="verify-email-display" class="verify-email"></span>
+      </p>
+      <p class="subtitle">Click the link in that email to activate your account, then sign in.</p>
+      <div class="verify-actions">
+        <button class="auth-submit" type="button" onclick="resendVerificationEmail()">Resend email</button>
+        <button class="verify-secondary" type="button" onclick="backToAuthFromVerify()">Back to sign in</button>
+      </div>
+      <p id="verify-status" class="error-msg"></p>
     </div>
 
     <div id="topic-screen" class="topic-screen hidden">
@@ -1002,6 +1062,8 @@
     let currentUser = null;
     let isGuest = false;
     let googleClientId = null;
+    let pendingVerifyEmail = '';
+    let emailVerificationEnabled = false;
 
     function getToken() {
       return localStorage.getItem(TOKEN_KEY);
@@ -1032,7 +1094,10 @@
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.message || 'Request failed.');
+        const error = new Error(data.message || 'Request failed.');
+        error.status = response.status;
+        error.data = data;
+        throw error;
       }
       return data;
     }
@@ -1065,6 +1130,68 @@
       document.getElementById('login-form').classList.toggle('hidden', mode !== 'login');
       document.getElementById('register-form').classList.toggle('hidden', mode !== 'register');
       document.getElementById('auth-error').textContent = '';
+      document.getElementById('auth-success').classList.add('hidden');
+    }
+
+    function showVerifyScreen(email) {
+      pendingVerifyEmail = email;
+      document.getElementById('verify-email-display').textContent = email;
+      document.getElementById('verify-status').textContent = '';
+      showScreen('verify-screen');
+    }
+
+    function backToAuthFromVerify() {
+      pendingVerifyEmail = '';
+      document.getElementById('verify-status').textContent = '';
+      showAuthMode('login');
+      showScreen('auth-screen');
+    }
+
+    async function resendVerificationEmail() {
+      if (!pendingVerifyEmail) return;
+
+      document.getElementById('verify-status').textContent = '';
+
+      try {
+        const data = await authFetch('/api/auth/resend-verification', {
+          method: 'POST',
+          body: JSON.stringify({ email: pendingVerifyEmail })
+        });
+        document.getElementById('verify-status').textContent = data.message;
+        document.getElementById('verify-status').style.color = '#059669';
+      } catch (error) {
+        document.getElementById('verify-status').textContent = error.message;
+        document.getElementById('verify-status').style.color = '';
+      }
+    }
+
+    function showAuthSuccess(message) {
+      const el = document.getElementById('auth-success');
+      el.textContent = message;
+      el.classList.remove('hidden');
+    }
+
+    function handleVerificationRedirect() {
+      const params = new URLSearchParams(window.location.search);
+      const verified = params.get('verified');
+
+      if (!verified) return;
+
+      window.history.replaceState({}, '', window.location.pathname);
+      showAuthMode('login');
+
+      if (verified === 'success') {
+        showAuthSuccess('Email verified. You can sign in now.');
+      } else if (verified === 'expired') {
+        document.getElementById('auth-error').textContent =
+          'That verification link expired. Sign in and request a new email.';
+      } else if (verified === 'invalid') {
+        document.getElementById('auth-error').textContent =
+          'That verification link is invalid or already used.';
+      } else {
+        document.getElementById('auth-error').textContent =
+          'Could not verify your email. Try again or request a new link.';
+      }
     }
 
     function updateTopicScreenAuth() {
@@ -1104,6 +1231,11 @@
           })
         });
 
+        if (data.requiresVerification) {
+          showVerifyScreen(data.email);
+          return;
+        }
+
         saveSession(data.token, data.user);
         showScreen('topic-screen');
         loadTopics();
@@ -1115,6 +1247,7 @@
     async function handleLogin(event) {
       event.preventDefault();
       document.getElementById('auth-error').textContent = '';
+      document.getElementById('auth-success').classList.add('hidden');
 
       try {
         const data = await authFetch('/api/auth/login', {
@@ -1129,6 +1262,10 @@
         showScreen('topic-screen');
         loadTopics();
       } catch (error) {
+        if (error.data?.requiresVerification) {
+          showVerifyScreen(error.data.email || document.getElementById('login-email').value);
+          return;
+        }
         document.getElementById('auth-error').textContent = error.message;
       }
     }
@@ -1188,6 +1325,7 @@
       try {
         const config = await fetch(`${API_BASE}/api/auth/config`).then((r) => r.json());
         googleClientId = config.googleClientId;
+        emailVerificationEnabled = Boolean(config.emailVerificationEnabled);
 
         if (googleClientId) {
           if (window.google?.accounts?.id) {
@@ -1217,6 +1355,7 @@
 
     async function initApp() {
       await loadAuthConfig();
+      handleVerificationRedirect();
 
       if (await restoreSession()) {
         showScreen('topic-screen');
@@ -1646,7 +1785,7 @@
     }
 
     function showScreen(screenId) {
-      ['auth-screen', 'topic-screen', 'waiting-screen', 'countdown-screen', 'quiz-screen', 'score-screen', 'match-score-screen'].forEach((id) => {
+      ['auth-screen', 'verify-screen', 'topic-screen', 'waiting-screen', 'countdown-screen', 'quiz-screen', 'score-screen', 'match-score-screen'].forEach((id) => {
         document.getElementById(id).classList.toggle('hidden', id !== screenId);
       });
       document.getElementById('card').classList.toggle('quiz-layout', screenId === 'quiz-screen');
