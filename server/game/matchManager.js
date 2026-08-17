@@ -2,6 +2,7 @@ import { pickQuestionsForMatch } from './questions.js';
 import { scoreAnswer, TIME_LIMIT_MS } from './scoring.js';
 
 const ROUND_DELAY_MS = 2500;
+const PRE_MATCH_COUNTDOWN_SEC = 3;
 const QUESTION_COUNT = 7;
 
 const activeMatches = new Map();
@@ -31,6 +32,8 @@ export class MatchManager {
       roundStartedAt: null,
       roundTimer: null,
       roundDelayTimer: null,
+      countdownTimer: null,
+      roundHistory: [],
       players: {
         [playerOne.socketId]: {
           socketId: playerOne.socketId,
@@ -64,7 +67,53 @@ export class MatchManager {
       topicName: topic.name
     });
 
-    this.startRound(match);
+    this.startCountdown(match);
+  }
+
+  startCountdown(match) {
+    const socketIds = Object.keys(match.players);
+    let step = PRE_MATCH_COUNTDOWN_SEC;
+
+    const emitCount = (count) => {
+      socketIds.forEach((socketId) => {
+        const opponent = Object.values(match.players).find((entry) => entry.socketId !== socketId);
+
+        this.io.to(socketId).emit('match:countdown', {
+          count,
+          opponentNickname: opponent.nickname,
+          topicName: match.topicName
+        });
+      });
+    };
+
+    const scheduleNext = () => {
+      if (step > 0) {
+        emitCount(step);
+        step -= 1;
+        match.countdownTimer = setTimeout(scheduleNext, 1000);
+        return;
+      }
+
+      socketIds.forEach((socketId) => {
+        this.io.to(socketId).emit('match:go');
+      });
+      this.startRound(match);
+    };
+
+    scheduleNext();
+  }
+
+  buildRoundSummary(match, socketId) {
+    const opponent = Object.values(match.players).find((entry) => entry.socketId !== socketId);
+
+    return match.roundHistory.map((round, index) => ({
+      questionNumber: index + 1,
+      questionText: round.questionText,
+      yourPoints: round.results[socketId]?.points ?? 0,
+      opponentPoints: round.results[opponent.socketId]?.points ?? 0,
+      yourCorrect: round.results[socketId]?.isCorrect ?? false,
+      opponentCorrect: round.results[opponent.socketId]?.isCorrect ?? false
+    }));
   }
 
   startRound(match) {
@@ -164,6 +213,17 @@ export class MatchManager {
       }
     });
 
+    const playerEntries = Object.values(match.players);
+    const [playerOne, playerTwo] = playerEntries;
+
+    match.roundHistory.push({
+      questionText: question.text,
+      results: {
+        [playerOne.socketId]: { ...playerOne.lastAnswer },
+        [playerTwo.socketId]: { ...playerTwo.lastAnswer }
+      }
+    });
+
     Object.keys(match.players).forEach((socketId) => {
       const player = match.players[socketId];
       const opponent = Object.values(match.players).find((entry) => entry.socketId !== socketId);
@@ -210,7 +270,8 @@ export class MatchManager {
         yourCorrectCount: player.correctCount,
         opponentScore: opponent.score,
         opponentNickname: opponent.nickname,
-        topicName: match.topicName
+        topicName: match.topicName,
+        roundSummary: this.buildRoundSummary(match, socketId)
       });
     });
 
@@ -232,7 +293,8 @@ export class MatchManager {
         yourCorrectCount: opponentEntry.correctCount,
         opponentScore: match.players[socketId].score,
         opponentNickname: match.players[socketId].nickname,
-        topicName: match.topicName
+        topicName: match.topicName,
+        roundSummary: this.buildRoundSummary(match, opponentEntry.socketId)
       });
     }
 
@@ -242,6 +304,7 @@ export class MatchManager {
   cleanupMatch(match) {
     if (match.roundTimer) clearTimeout(match.roundTimer);
     if (match.roundDelayTimer) clearTimeout(match.roundDelayTimer);
+    if (match.countdownTimer) clearTimeout(match.countdownTimer);
 
     Object.keys(match.players).forEach((socketId) => {
       socketToMatch.delete(socketId);
