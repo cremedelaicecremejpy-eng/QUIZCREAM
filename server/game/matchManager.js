@@ -1,5 +1,6 @@
 import { pickQuestionsForMatch } from './questions.js';
 import { scoreAnswer, TIME_LIMIT_MS } from './scoring.js';
+import { persistMatchResult } from './persistMatch.js';
 
 const ROUND_DELAY_MS = 2500;
 const PRE_MATCH_COUNTDOWN_SEC = 3;
@@ -38,6 +39,7 @@ export class MatchManager {
         [playerOne.socketId]: {
           socketId: playerOne.socketId,
           nickname: playerOne.nickname,
+          userId: playerOne.userId || null,
           score: 0,
           correctCount: 0,
           answered: false,
@@ -46,6 +48,7 @@ export class MatchManager {
         [playerTwo.socketId]: {
           socketId: playerTwo.socketId,
           nickname: playerTwo.nickname,
+          userId: playerTwo.userId || null,
           score: 0,
           correctCount: 0,
           answered: false,
@@ -244,19 +247,32 @@ export class MatchManager {
     match.currentRound += 1;
 
     if (match.currentRound >= match.questions.length) {
-      match.roundDelayTimer = setTimeout(() => this.endMatch(match), ROUND_DELAY_MS);
+      match.roundDelayTimer = setTimeout(() => this.endMatch(match, { forfeit: false }), ROUND_DELAY_MS);
     } else {
       match.roundDelayTimer = setTimeout(() => this.startRound(match), ROUND_DELAY_MS);
     }
   }
 
-  endMatch(match) {
+  async endMatch(match, options = {}) {
+    const { forfeit = false } = options;
     const playerEntries = Object.values(match.players);
     const [playerOne, playerTwo] = playerEntries;
 
     let winner = 'draw';
     if (playerOne.score > playerTwo.score) winner = playerOne.socketId;
     else if (playerTwo.score > playerOne.score) winner = playerTwo.socketId;
+
+    const isDraw = winner === 'draw';
+
+    try {
+      await persistMatchResult(match, {
+        winnerSocketId: isDraw ? 'draw' : winner,
+        isDraw,
+        forfeit
+      });
+    } catch (error) {
+      console.error('Failed to persist match result:', error.message);
+    }
 
     Object.keys(match.players).forEach((socketId) => {
       const player = match.players[socketId];
@@ -284,6 +300,14 @@ export class MatchManager {
 
     const opponentEntry = Object.values(match.players).find((player) => player.socketId !== socketId);
     if (opponentEntry) {
+      persistMatchResult(match, {
+        winnerSocketId: opponentEntry.socketId,
+        isDraw: false,
+        forfeit: true
+      }).catch((error) => {
+        console.error('Failed to persist forfeit match:', error.message);
+      });
+
       this.io.to(opponentEntry.socketId).emit('match:end', {
         winner: opponentEntry.socketId,
         isDraw: false,

@@ -360,29 +360,6 @@
       transform: translateY(-1px);
     }
 
-    .btn-row {
-      display: flex;
-      justify-content: center;
-      gap: 0.75rem;
-    }
-
-    .home-btn {
-      padding: 0.75rem 1.5rem;
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: #667eea;
-      background: #ffffff;
-      border: 2px solid #667eea;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.15s;
-    }
-
-    .home-btn:hover {
-      background: #f0f1fe;
-      transform: translateY(-1px);
-    }
-
     .topic-screen.hidden,
     .quiz-screen.hidden,
     .score-screen.hidden {
@@ -867,6 +844,101 @@
       font-size: 0.875rem;
       margin-bottom: 1rem;
     }
+
+    .history-screen {
+      text-align: left;
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .history-header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+
+    .back-btn,
+    .stats-btn {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #667eea;
+      background: #ffffff;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .stats-section-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #374151;
+      margin: 1.25rem 0 0.75rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+
+    .stat-card {
+      background: #f4f4f8;
+      border-radius: 10px;
+      padding: 0.875rem;
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .history-table-wrap {
+      overflow-x: auto;
+      margin-top: 0.5rem;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+
+    .history-table th,
+    .history-table td {
+      padding: 0.625rem 0.5rem;
+      border-bottom: 1px solid #ececf4;
+      text-align: left;
+    }
+
+    .history-table th {
+      color: #6b7280;
+      font-weight: 600;
+    }
+
+    .result-win { color: #059669; font-weight: 700; }
+    .result-loss { color: #dc2626; font-weight: 700; }
+    .result-draw { color: #6b7280; font-weight: 700; }
+
+    .user-bar-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
@@ -938,13 +1010,80 @@
           Signed in as <strong id="user-bar-name"></strong><br />
           <span id="user-bar-record"></span>
         </div>
-        <button class="logout-btn" type="button" onclick="logout()">Log out</button>
+        <div class="user-bar-actions">
+          <button class="stats-btn" type="button" onclick="openHistoryScreen()">My Stats</button>
+          <button class="logout-btn" type="button" onclick="logout()">Log out</button>
+        </div>
       </div>
 
       <p id="guest-note" class="guest-note hidden">Playing as guest — wins won't be saved to an account.</p>
       <input id="nickname" class="nickname-field" type="text" maxlength="20" placeholder="Your nickname" />
       <div id="topic-list" class="topic-list"></div>
       <p id="topic-error" class="error-msg"></p>
+    </div>
+
+    <div id="history-screen" class="history-screen hidden">
+      <div class="history-header">
+        <h1>My Stats</h1>
+        <button class="back-btn" type="button" onclick="showScreen('topic-screen')">Back</button>
+      </div>
+
+      <p id="history-user-line" class="subtitle"></p>
+      <p id="history-error" class="error-msg"></p>
+
+      <p class="stats-section-title">Overall</p>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Record</span>
+          <span id="stat-record" class="stat-value">0W · 0L</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">1v1 matches</span>
+          <span id="stat-matches" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Accuracy</span>
+          <span id="stat-accuracy" class="stat-value">0%</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Avg correct / match</span>
+          <span id="stat-avg-correct" class="stat-value">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Avg answer time</span>
+          <span id="stat-avg-time" class="stat-value">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Avg time (correct)</span>
+          <span id="stat-avg-correct-time" class="stat-value">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Avg time (wrong)</span>
+          <span id="stat-avg-wrong-time" class="stat-value">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Questions answered</span>
+          <span id="stat-questions" class="stat-value">0</span>
+        </div>
+      </div>
+
+      <p class="stats-section-title">Recent matches</p>
+      <div class="history-table-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Topic</th>
+              <th>Opponent</th>
+              <th>Score</th>
+              <th>Result</th>
+              <th>Acc.</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body"></tbody>
+        </table>
+      </div>
+      <p id="history-empty" class="guest-note hidden">No saved 1v1 matches yet. Sign in and play a battle!</p>
     </div>
 
     <div id="waiting-screen" class="waiting-screen hidden">
@@ -1042,10 +1181,7 @@
         <tbody id="round-summary-body"></tbody>
       </table>
 
-      <div class="btn-row">
-        <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
-        <button class="home-btn" onclick="restartQuiz()">Home</button>
-      </div>
+      <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
     </div>
 
     <div id="score-screen" class="score-screen hidden">
@@ -1053,10 +1189,7 @@
       <p class="score-message">Total score</p>
       <p id="score-value" class="score-value"></p>
       <p id="score-label" class="score-label"></p>
-      <div class="btn-row">
-        <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
-        <button class="home-btn" onclick="restartQuiz()">Home</button>
-      </div>
+      <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
     </div>
   </div>
 
@@ -1151,6 +1284,101 @@
       currentUser = null;
       resetSocket();
       updateTopicScreenAuth();
+    }
+
+    function formatStatMs(ms) {
+      if (!ms) return '—';
+      return `${(ms / 1000).toFixed(2)}s`;
+    }
+
+    function formatMatchDate(value) {
+      return new Date(value).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    async function refreshUserRecord() {
+      if (!currentUser) return;
+
+      try {
+        const stats = await authFetch('/api/me/stats');
+        currentUser.wins = stats.wins;
+        currentUser.losses = stats.losses;
+        updateTopicScreenAuth();
+      } catch (_error) {
+        // Keep existing record if refresh fails.
+      }
+    }
+
+    async function openHistoryScreen() {
+      if (!currentUser) return;
+      showScreen('history-screen');
+      await loadHistoryPage();
+    }
+
+    async function loadHistoryPage() {
+      const errorEl = document.getElementById('history-error');
+      const emptyEl = document.getElementById('history-empty');
+      const tableBody = document.getElementById('history-table-body');
+
+      errorEl.textContent = '';
+      tableBody.innerHTML = '';
+      document.getElementById('history-user-line').textContent =
+        `Signed in as ${currentUser.username}`;
+
+      try {
+        const [stats, history] = await Promise.all([
+          authFetch('/api/me/stats'),
+          authFetch('/api/me/matches')
+        ]);
+
+        currentUser.wins = stats.wins;
+        currentUser.losses = stats.losses;
+        updateTopicScreenAuth();
+
+        document.getElementById('stat-record').textContent = `${stats.wins}W · ${stats.losses}L`;
+        document.getElementById('stat-matches').textContent = stats.totalMatches;
+        document.getElementById('stat-accuracy').textContent = `${stats.accuracyPercent}%`;
+        document.getElementById('stat-avg-correct').textContent = stats.avgCorrectPerMatch;
+        document.getElementById('stat-avg-time').textContent = formatStatMs(stats.avgAnswerTimeMs);
+        document.getElementById('stat-avg-correct-time').textContent =
+          formatStatMs(stats.avgCorrectTimeMs);
+        document.getElementById('stat-avg-wrong-time').textContent =
+          formatStatMs(stats.avgWrongTimeMs);
+        document.getElementById('stat-questions').textContent = stats.totalQuestions;
+
+        const matches = history.matches || [];
+        emptyEl.classList.toggle('hidden', matches.length > 0);
+
+        matches.forEach((match) => {
+          const row = document.createElement('tr');
+
+          const resultClass =
+            match.result === 'win'
+              ? 'result-win'
+              : match.result === 'loss'
+                ? 'result-loss'
+                : 'result-draw';
+          const resultLabel =
+            match.result === 'win' ? 'Win' : match.result === 'loss' ? 'Loss' : 'Draw';
+
+          row.innerHTML = `
+            <td>${formatMatchDate(match.createdAt)}</td>
+            <td>${match.topicName}</td>
+            <td>${match.opponentLabel}${match.forfeit ? ' (forfeit)' : ''}</td>
+            <td>${match.yourScore} - ${match.opponentScore}</td>
+            <td class="${resultClass}">${resultLabel}</td>
+            <td>${match.accuracyPercent}%</td>
+          `;
+          tableBody.appendChild(row);
+        });
+      } catch (error) {
+        errorEl.textContent = error.message;
+        emptyEl.classList.add('hidden');
+      }
     }
 
     function showAuthMode(mode) {
@@ -1654,6 +1882,7 @@
         socket.on('match:end', (data) => {
           clearTimer();
           showMatchScore(data);
+          refreshUserRecord();
         });
 
         socket.on('error', ({ message }) => {
@@ -1814,7 +2043,7 @@
     }
 
     function showScreen(screenId) {
-      ['auth-screen', 'verify-screen', 'topic-screen', 'waiting-screen', 'countdown-screen', 'quiz-screen', 'score-screen', 'match-score-screen'].forEach((id) => {
+      ['auth-screen', 'verify-screen', 'topic-screen', 'history-screen', 'waiting-screen', 'countdown-screen', 'quiz-screen', 'score-screen', 'match-score-screen'].forEach((id) => {
         document.getElementById(id).classList.toggle('hidden', id !== screenId);
       });
       document.getElementById('card').classList.toggle('quiz-layout', screenId === 'quiz-screen');

@@ -10,6 +10,7 @@ import { pickQuestionsForMatch } from './game/questions.js';
 import { joinQueue, leaveQueue } from './matchmaking/queue.js';
 import { MatchManager } from './game/matchManager.js';
 import authRouter from './routes/auth.js';
+import meRouter from './routes/me.js';
 import { getUserFromToken } from './middleware/auth.js';
 
 dotenv.config();
@@ -32,6 +33,7 @@ app.use(express.json());
 app.use(express.static(publicDir));
 
 app.use('/api/auth', authRouter);
+app.use('/api/me', meRouter);
 
 app.get('/api/health', async (_req, res) => {
   try {

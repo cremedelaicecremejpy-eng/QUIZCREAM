@@ -42,23 +42,46 @@ model User {
   isPro                      Boolean   @default(false)
   createdAt                  DateTime  @default(now())
 
-  matchesAsPlayer1 Match[] @relation("Player1")
-  matchesAsPlayer2 Match[] @relation("Player2")
-  winsAsWinner     Match[] @relation("Winner")
+  matchesAsPlayer1 Match[]        @relation("Player1")
+  matchesAsPlayer2 Match[]        @relation("Player2")
+  winsAsWinner     Match[]        @relation("Winner")
+  matchAnswers     MatchAnswer[]
 }
 
 model Match {
   id           String   @id @default(cuid())
   topicId      String
-  player1Id    String
-  player2Id    String
+  player1Id    String?
+  player2Id    String?
+  guestName1   String?
+  guestName2   String?
   player1Score Int
   player2Score Int
   winnerId     String?
+  isDraw       Boolean  @default(false)
+  forfeit      Boolean  @default(false)
   createdAt    DateTime @default(now())
 
-  topic   Topic @relation(fields: [topicId], references: [id])
-  player1 User  @relation("Player1", fields: [player1Id], references: [id])
-  player2 User  @relation("Player2", fields: [player2Id], references: [id])
-  winner  User? @relation("Winner", fields: [winnerId], references: [id])
+  topic   Topic         @relation(fields: [topicId], references: [id])
+  player1 User?         @relation("Player1", fields: [player1Id], references: [id])
+  player2 User?         @relation("Player2", fields: [player2Id], references: [id])
+  winner  User?         @relation("Winner", fields: [winnerId], references: [id])
+  answers MatchAnswer[]
+}
+
+model MatchAnswer {
+  id            String  @id @default(cuid())
+  matchId       String
+  userId        String
+  questionIndex Int
+  elapsedMs     Int
+  isCorrect     Boolean
+  points        Int
+  selectedIndex Int?
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+  @@index([userId])
 }
