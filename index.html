@@ -360,6 +360,29 @@
       transform: translateY(-1px);
     }
 
+    .btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .home-btn {
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #667eea;
+      background: #ffffff;
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .home-btn:hover {
+      background: #f0f1fe;
+      transform: translateY(-1px);
+    }
+
     .topic-screen.hidden,
     .quiz-screen.hidden,
     .score-screen.hidden {
@@ -767,7 +790,10 @@
         <tbody id="round-summary-body"></tbody>
       </table>
 
-      <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
+      <div class="btn-row">
+        <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
+        <button class="home-btn" onclick="restartQuiz()">Home</button>
+      </div>
     </div>
 
     <div id="score-screen" class="score-screen hidden">
@@ -775,7 +801,10 @@
       <p class="score-message">Total score</p>
       <p id="score-value" class="score-value"></p>
       <p id="score-label" class="score-label"></p>
-      <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
+      <div class="btn-row">
+        <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
+        <button class="home-btn" onclick="restartQuiz()">Home</button>
+      </div>
     </div>
   </div>
 
