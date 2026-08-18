@@ -1,10 +1,15 @@
 import prisma from '../lib/prisma.js';
 
 function shuffleQuestion(q) {
-  const options = [q.optionA, q.optionB, q.optionC, q.optionD];
+  const options = [
+    { text: q.optionA || '', imageUrl: q.optionAImageUrl || null },
+    { text: q.optionB || '', imageUrl: q.optionBImageUrl || null },
+    { text: q.optionC || '', imageUrl: q.optionCImageUrl || null },
+    { text: q.optionD || '', imageUrl: q.optionDImageUrl || null }
+  ];
   const correctIndex = ['A', 'B', 'C', 'D'].indexOf(q.correctOption);
 
-  const indexed = options.map((text, index) => ({ text, index }));
+  const indexed = options.map((option, index) => ({ ...option, index }));
   for (let i = indexed.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
@@ -12,9 +17,9 @@ function shuffleQuestion(q) {
 
   return {
     id: q.id,
-    text: q.text,
+    text: q.text || '',
     imageUrl: q.imageUrl || null,
-    options: indexed.map((item) => item.text),
+    options: indexed.map(({ text, imageUrl }) => ({ text, imageUrl })),
     correctIndex: indexed.findIndex((item) => item.index === correctIndex)
   };
 }

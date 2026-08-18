@@ -8,15 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const csvPath = path.join(__dirname, '..', 'data', 'questions.csv');
 
-const REQUIRED_COLUMNS = [
-  'topic',
-  'text',
-  'optionA',
-  'optionB',
-  'optionC',
-  'optionD',
-  'correct'
-];
+const REQUIRED_COLUMNS = ['topic', 'correct'];
+
+const OPTION_KEYS = ['A', 'B', 'C', 'D'];
 
 function parseCsv(content) {
   const rows = [];
@@ -73,7 +67,7 @@ function parseCsv(content) {
   });
 }
 
-function normalizeImageUrl(imageValue) {
+function normalizeImageUrl(imageValue, fieldName, lineNumber) {
   if (!imageValue) return null;
 
   const trimmed = imageValue.trim();
@@ -81,14 +75,31 @@ function normalizeImageUrl(imageValue) {
 
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     throw new Error(
-      `Image must be a full URL starting with https:// (got "${trimmed}"). Upload to Cloudinary/S3 and paste the URL.`
+      `Row ${lineNumber}: ${fieldName} must be a full https:// URL (got "${trimmed}").`
     );
   }
 
   return trimmed;
 }
 
+function readOption(row, letter) {
+  const text = row[`option${letter}`]?.trim() || '';
+  const imageUrl = normalizeImageUrl(
+    row[`option${letter}ImageUrl`] || '',
+    `option${letter}ImageUrl`,
+    row.__lineNumber
+  );
+
+  if (!text && !imageUrl) {
+    throw new Error(`Row ${row.__lineNumber}: option${letter} needs text and/or option${letter}ImageUrl.`);
+  }
+
+  return { text, imageUrl };
+}
+
 function validateRow(row, lineNumber) {
+  row.__lineNumber = lineNumber;
+
   for (const column of REQUIRED_COLUMNS) {
     if (!row[column]) {
       throw new Error(`Row ${lineNumber}: missing required column "${column}".`);
@@ -96,56 +107,76 @@ function validateRow(row, lineNumber) {
   }
 
   const correct = row.correct.trim().toUpperCase();
-  if (!['A', 'B', 'C', 'D'].includes(correct)) {
+  if (!OPTION_KEYS.includes(correct)) {
     throw new Error(`Row ${lineNumber}: correct must be A, B, C, or D.`);
   }
 
-  const rawImage = row.imageUrl || row.image || '';
+  const text = row.text?.trim() || '';
+  const imageUrl = normalizeImageUrl(row.imageUrl || row.image || '', 'imageUrl', lineNumber);
+
+  if (!text && !imageUrl) {
+    throw new Error(`Row ${lineNumber}: provide question text and/or imageUrl.`);
+  }
+
+  const optionA = readOption(row, 'A');
+  const optionB = readOption(row, 'B');
+  const optionC = readOption(row, 'C');
+  const optionD = readOption(row, 'D');
 
   return {
     topic: row.topic.trim(),
-    text: row.text.trim(),
-    optionA: row.optionA.trim(),
-    optionB: row.optionB.trim(),
-    optionC: row.optionC.trim(),
-    optionD: row.optionD.trim(),
-    correctOption: correct,
-    imageUrl: rawImage ? normalizeImageUrl(rawImage) : null
+    text,
+    imageUrl,
+    optionA: optionA.text,
+    optionB: optionB.text,
+    optionC: optionC.text,
+    optionD: optionD.text,
+    optionAImageUrl: optionA.imageUrl,
+    optionBImageUrl: optionB.imageUrl,
+    optionCImageUrl: optionC.imageUrl,
+    optionDImageUrl: optionD.imageUrl,
+    correctOption: correct
   };
+}
+
+function questionLookupWhere(topicId, question) {
+  if (question.text) {
+    return { topicId, text: question.text };
+  }
+
+  return { topicId, text: '', imageUrl: question.imageUrl };
 }
 
 async function upsertQuestion(topicId, question) {
   const existing = await prisma.question.findFirst({
-    where: {
-      topicId,
-      text: question.text
-    }
+    where: questionLookupWhere(topicId, question)
   });
+
+  const data = {
+    text: question.text,
+    imageUrl: question.imageUrl,
+    optionA: question.optionA,
+    optionB: question.optionB,
+    optionC: question.optionC,
+    optionD: question.optionD,
+    optionAImageUrl: question.optionAImageUrl,
+    optionBImageUrl: question.optionBImageUrl,
+    optionCImageUrl: question.optionCImageUrl,
+    optionDImageUrl: question.optionDImageUrl,
+    correctOption: question.correctOption
+  };
 
   if (existing) {
     return prisma.question.update({
       where: { id: existing.id },
-      data: {
-        optionA: question.optionA,
-        optionB: question.optionB,
-        optionC: question.optionC,
-        optionD: question.optionD,
-        correctOption: question.correctOption,
-        imageUrl: question.imageUrl
-      }
+      data
     });
   }
 
   return prisma.question.create({
     data: {
       topicId,
-      text: question.text,
-      optionA: question.optionA,
-      optionB: question.optionB,
-      optionC: question.optionC,
-      optionD: question.optionD,
-      correctOption: question.correctOption,
-      imageUrl: question.imageUrl
+      ...data
     }
   });
 }
@@ -164,7 +195,6 @@ async function main() {
 
   let created = 0;
   let updated = 0;
-  let withImages = 0;
 
   for (let index = 0; index < records.length; index += 1) {
     const question = validateRow(records[index], index + 2);
@@ -176,17 +206,16 @@ async function main() {
     }
 
     const before = await prisma.question.findFirst({
-      where: { topicId: topic.id, text: question.text }
+      where: questionLookupWhere(topic.id, question)
     });
 
     await upsertQuestion(topic.id, question);
 
-    if (question.imageUrl) withImages += 1;
     if (before) updated += 1;
     else created += 1;
   }
 
-  console.log(`Import complete: ${created} created, ${updated} updated, ${withImages} with image URLs.`);
+  console.log(`Import complete: ${created} created, ${updated} updated.`);
 }
 
 main()

@@ -1,57 +1,58 @@
-# Question CSV import (URL-only images)
+# Question format for Neon / CSV import
 
-Edit `questions.csv`, then run:
+## Required every row
+- `topic` — e.g. Flags
+- `correct` — A, B, C, or D
 
-```powershell
-cd server
-npm run db:import
+## Question (at least one)
+- `text` — question words (can be **empty** if you only show an image)
+- `imageUrl` — full https URL for question image (flag, photo, etc.)
+
+## Each option A–D (each needs text **or** image URL, or both)
+- `optionA` … `optionD` — answer text (can be empty if image URL provided)
+- `optionAImageUrl` … `optionDImageUrl` — full https URL for image answers
+
+## Mix and match examples
+
+**Image question + text options (flags quiz):**
+```
+text: "Which country is this flag?"
+imageUrl: https://.../flag-france.svg
+optionA-D: country names
+option image URLs: empty
 ```
 
-## CSV columns
-
-| Column | Required | Example |
-|---|---|---|
-| topic | yes | Flags |
-| text | yes | Which country is this flag? |
-| optionA | yes | France |
-| optionB | yes | Germany |
-| optionC | yes | Italy |
-| optionD | yes | Spain |
-| correct | yes | A |
-| imageUrl | no | https://res.cloudinary.com/.../flags-france.png |
-
-Leave `imageUrl` empty for text-only questions.
-
-## Image URLs (no local files)
-
-1. Upload images to **Cloudinary**, **S3**, **ImgBB**, etc.
-2. Copy the **https://** URL
-3. Paste it in the `imageUrl` column on the same row as the question
-
-The URL **is** the link — same row = that image shows for that question.
-
-## Naming URLs for easy tagging
-
-Use predictable names when you upload:
-
+**Image-only question + text options:**
 ```
-https://res.cloudinary.com/your-cloud/image/upload/quizcream/flags-france.png
-https://res.cloudinary.com/your-cloud/image/upload/quizcream/flags-japan.png
-https://res.cloudinary.com/your-cloud/image/upload/quizcream/flags-brazil.png
+text: (empty)
+imageUrl: https://.../flag-france.svg
+optionA-D: country names
 ```
 
-You can see the country in the URL — easy to match when editing the CSV.
+**Text question + image options:**
+```
+text: "Which flag is France?"
+imageUrl: (empty)
+optionA: (empty)
+optionAImageUrl: https://.../flag-france.svg
+```
 
-## Example flag row
+Text-only questions still work with everything empty except option text.
+
+## CSV header
 
 ```csv
-Flags,Which country is this flag?,France,UK,Germany,Italy,A,https://res.cloudinary.com/you/image/upload/quizcream/flags-france.png
+topic,text,optionA,optionB,optionC,optionD,correct,imageUrl,optionAImageUrl,optionBImageUrl,optionCImageUrl,optionDImageUrl
 ```
 
-## Upsert behavior
+Import: `npm run db:import`
 
-- Same `topic` + `text` → updates that question
-- New row → creates a new question
-- New topic name → creates the topic automatically
+## Neon Question table columns
 
-No GitHub image folders needed. Push code only; images live on your CDN.
+| Column | Purpose |
+|---|---|
+| text | Question words (optional if imageUrl set) |
+| imageUrl | Question image |
+| optionA–D | Answer text (optional if option image set) |
+| optionAImageUrl–optionDImageUrl | Answer images |
+| correctOption | A, B, C, or D |

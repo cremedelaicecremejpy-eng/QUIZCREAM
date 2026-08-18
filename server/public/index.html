@@ -242,6 +242,33 @@
       transition: background 0.2s, border-color 0.2s, transform 0.15s;
     }
 
+    .options button.option-has-image {
+      padding: 0.5rem;
+      min-height: 88px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .options button .option-image {
+      max-height: 72px;
+      max-width: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+    .options button .option-label {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.875rem;
+    }
+
+    .card .question.hidden {
+      display: none;
+      margin: 0;
+    }
+
     .options button:hover:not(:disabled) {
       background: #ececf4;
       border-color: #667eea;
@@ -2191,12 +2218,46 @@
       showScreen('topic-screen');
     }
 
+    function getOptionLabel(option) {
+      if (!option) return 'Option';
+      if (typeof option === 'string') return option;
+      if (option.text) return option.text;
+      if (option.imageUrl) return 'Image option';
+      return 'Option';
+    }
+
+    function renderOptionButton(option) {
+      const btn = document.createElement('button');
+      const imageUrl = typeof option === 'object' ? option.imageUrl : null;
+      const text = typeof option === 'object' ? option.text : option;
+
+      if (imageUrl) {
+        btn.classList.add('option-has-image');
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.alt = text || 'Answer option';
+        img.className = 'option-image';
+        btn.appendChild(img);
+
+        if (text) {
+          const label = document.createElement('span');
+          label.className = 'option-label';
+          label.textContent = text;
+          btn.appendChild(label);
+        }
+      } else {
+        btn.textContent = text;
+      }
+
+      return btn;
+    }
+
     function getOpponentPickMessage(opponentAnswer, options, name) {
       if (opponentAnswer.selectedIndex === null) {
         return `${name} ran out of time (+0 pts)`;
       }
 
-      const optionText = options[opponentAnswer.selectedIndex];
+      const optionText = getOptionLabel(options[opponentAnswer.selectedIndex]);
       if (opponentAnswer.isCorrect) {
         return `${name} picked: ${optionText} (+${opponentAnswer.points} pts)`;
       }
@@ -2307,6 +2368,18 @@
       }
     }
 
+    function setQuestionText(text) {
+      const questionEl = document.getElementById('question');
+
+      if (text) {
+        questionEl.textContent = text;
+        questionEl.classList.remove('hidden');
+      } else {
+        questionEl.textContent = '';
+        questionEl.classList.add('hidden');
+      }
+    }
+
     function loadQuestion(serverStartedAt) {
       const q = gameMode === 'multiplayer' ? currentQuestion : questions[currentIndex];
       answered = false;
@@ -2314,7 +2387,7 @@
       document.getElementById('progress').textContent =
         `${selectedTopicName} · Q${currentIndex + 1}/${totalQuestions}`;
       setQuestionImage(q.imageUrl || null);
-      document.getElementById('question').textContent = q.text;
+      setQuestionText(q.text || '');
       document.getElementById('feedback').textContent = '';
       document.getElementById('feedback').className = 'feedback';
       document.getElementById('opponent-pick-label').classList.add('hidden');
@@ -2328,8 +2401,7 @@
       optionsEl.innerHTML = '';
 
       q.options.forEach((option, index) => {
-        const btn = document.createElement('button');
-        btn.textContent = option;
+        const btn = renderOptionButton(option);
         btn.onclick = () => checkAnswer(index);
         optionsEl.appendChild(btn);
       });

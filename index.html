@@ -210,6 +210,20 @@
       margin-bottom: 2rem;
     }
 
+    .question-image {
+      display: block;
+      width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      border-radius: 12px;
+      background: #f4f4f8;
+      margin: 0 auto 1rem;
+    }
+
+    .question-image.hidden {
+      display: none;
+    }
+
     .options {
       display: flex;
       flex-direction: column;
@@ -226,6 +240,33 @@
       border-radius: 10px;
       cursor: pointer;
       transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+
+    .options button.option-has-image {
+      padding: 0.5rem;
+      min-height: 88px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .options button .option-image {
+      max-height: 72px;
+      max-width: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+
+    .options button .option-label {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.875rem;
+    }
+
+    .card .question.hidden {
+      display: none;
+      margin: 0;
     }
 
     .options button:hover:not(:disabled) {
@@ -357,6 +398,29 @@
 
     .restart-btn:hover {
       background: #5a6fd6;
+      transform: translateY(-1px);
+    }
+
+    .btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .home-btn {
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #667eea;
+      background: #ffffff;
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .home-btn:hover {
+      background: #f0f1fe;
       transform: translateY(-1px);
     }
 
@@ -1128,6 +1192,7 @@
 
         <div class="quiz-main">
           <h1>Trivia</h1>
+          <img id="question-image" class="question-image hidden" alt="Question illustration" />
           <p id="question" class="question"></p>
           <div id="options" class="options"></div>
           <p id="feedback" class="feedback"></p>
@@ -1181,7 +1246,10 @@
         <tbody id="round-summary-body"></tbody>
       </table>
 
-      <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
+      <div class="btn-row">
+        <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
+        <button class="home-btn" onclick="restartQuiz()">Home</button>
+      </div>
     </div>
 
     <div id="score-screen" class="score-screen hidden">
@@ -1189,7 +1257,10 @@
       <p class="score-message">Total score</p>
       <p id="score-value" class="score-value"></p>
       <p id="score-label" class="score-label"></p>
-      <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
+      <div class="btn-row">
+        <button class="restart-btn" onclick="restartQuiz()">Play Again</button>
+        <button class="home-btn" onclick="restartQuiz()">Home</button>
+      </div>
     </div>
   </div>
 
@@ -2147,12 +2218,46 @@
       showScreen('topic-screen');
     }
 
+    function getOptionLabel(option) {
+      if (!option) return 'Option';
+      if (typeof option === 'string') return option;
+      if (option.text) return option.text;
+      if (option.imageUrl) return 'Image option';
+      return 'Option';
+    }
+
+    function renderOptionButton(option) {
+      const btn = document.createElement('button');
+      const imageUrl = typeof option === 'object' ? option.imageUrl : null;
+      const text = typeof option === 'object' ? option.text : option;
+
+      if (imageUrl) {
+        btn.classList.add('option-has-image');
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.alt = text || 'Answer option';
+        img.className = 'option-image';
+        btn.appendChild(img);
+
+        if (text) {
+          const label = document.createElement('span');
+          label.className = 'option-label';
+          label.textContent = text;
+          btn.appendChild(label);
+        }
+      } else {
+        btn.textContent = text;
+      }
+
+      return btn;
+    }
+
     function getOpponentPickMessage(opponentAnswer, options, name) {
       if (opponentAnswer.selectedIndex === null) {
         return `${name} ran out of time (+0 pts)`;
       }
 
-      const optionText = options[opponentAnswer.selectedIndex];
+      const optionText = getOptionLabel(options[opponentAnswer.selectedIndex]);
       if (opponentAnswer.isCorrect) {
         return `${name} picked: ${optionText} (+${opponentAnswer.points} pts)`;
       }
@@ -2251,13 +2356,38 @@
       }
     }
 
+    function setQuestionImage(imageUrl) {
+      const imageEl = document.getElementById('question-image');
+
+      if (imageUrl) {
+        imageEl.src = imageUrl;
+        imageEl.classList.remove('hidden');
+      } else {
+        imageEl.removeAttribute('src');
+        imageEl.classList.add('hidden');
+      }
+    }
+
+    function setQuestionText(text) {
+      const questionEl = document.getElementById('question');
+
+      if (text) {
+        questionEl.textContent = text;
+        questionEl.classList.remove('hidden');
+      } else {
+        questionEl.textContent = '';
+        questionEl.classList.add('hidden');
+      }
+    }
+
     function loadQuestion(serverStartedAt) {
       const q = gameMode === 'multiplayer' ? currentQuestion : questions[currentIndex];
       answered = false;
 
       document.getElementById('progress').textContent =
         `${selectedTopicName} · Q${currentIndex + 1}/${totalQuestions}`;
-      document.getElementById('question').textContent = q.text;
+      setQuestionImage(q.imageUrl || null);
+      setQuestionText(q.text || '');
       document.getElementById('feedback').textContent = '';
       document.getElementById('feedback').className = 'feedback';
       document.getElementById('opponent-pick-label').classList.add('hidden');
@@ -2271,8 +2401,7 @@
       optionsEl.innerHTML = '';
 
       q.options.forEach((option, index) => {
-        const btn = document.createElement('button');
-        btn.textContent = option;
+        const btn = renderOptionButton(option);
         btn.onclick = () => checkAnswer(index);
         optionsEl.appendChild(btn);
       });

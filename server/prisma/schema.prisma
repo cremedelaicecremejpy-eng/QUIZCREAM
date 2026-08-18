@@ -15,16 +15,20 @@ model Topic {
 }
 
 model Question {
-  id            String  @id @default(cuid())
-  topicId       String
-  text          String
-  imageUrl      String?
-  optionA       String
-  optionB       String
-  optionC       String
-  optionD       String
-  correctOption String
-  topic         Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  id              String  @id @default(cuid())
+  topicId         String
+  text            String  @default("")
+  imageUrl        String?
+  optionA         String  @default("")
+  optionB         String  @default("")
+  optionC         String  @default("")
+  optionD         String  @default("")
+  optionAImageUrl String?
+  optionBImageUrl String?
+  optionCImageUrl String?
+  optionDImageUrl String?
+  correctOption   String
+  topic           Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@index([topicId])
 }
