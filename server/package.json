@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma generate && node prisma/seed.js",
+    "db:import": "prisma generate && node prisma/importQuestions.js",
     "db:setup": "prisma migrate dev && prisma generate && node prisma/seed.js",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"

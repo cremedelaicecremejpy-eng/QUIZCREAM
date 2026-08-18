@@ -141,6 +141,7 @@ export class MatchManager {
         startedAt: match.roundStartedAt,
         question: {
           text: question.text,
+          imageUrl: question.imageUrl || null,
           options: question.options
         },
         scores: this.getScores(match, socketId)

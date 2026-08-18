@@ -210,6 +210,20 @@
       margin-bottom: 2rem;
     }
 
+    .question-image {
+      display: block;
+      width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      border-radius: 12px;
+      background: #f4f4f8;
+      margin: 0 auto 1rem;
+    }
+
+    .question-image.hidden {
+      display: none;
+    }
+
     .options {
       display: flex;
       flex-direction: column;
@@ -1151,6 +1165,7 @@
 
         <div class="quiz-main">
           <h1>Trivia</h1>
+          <img id="question-image" class="question-image hidden" alt="Question illustration" />
           <p id="question" class="question"></p>
           <div id="options" class="options"></div>
           <p id="feedback" class="feedback"></p>
@@ -2280,12 +2295,25 @@
       }
     }
 
+    function setQuestionImage(imageUrl) {
+      const imageEl = document.getElementById('question-image');
+
+      if (imageUrl) {
+        imageEl.src = imageUrl;
+        imageEl.classList.remove('hidden');
+      } else {
+        imageEl.removeAttribute('src');
+        imageEl.classList.add('hidden');
+      }
+    }
+
     function loadQuestion(serverStartedAt) {
       const q = gameMode === 'multiplayer' ? currentQuestion : questions[currentIndex];
       answered = false;
 
       document.getElementById('progress').textContent =
         `${selectedTopicName} · Q${currentIndex + 1}/${totalQuestions}`;
+      setQuestionImage(q.imageUrl || null);
       document.getElementById('question').textContent = q.text;
       document.getElementById('feedback').textContent = '';
       document.getElementById('feedback').className = 'feedback';

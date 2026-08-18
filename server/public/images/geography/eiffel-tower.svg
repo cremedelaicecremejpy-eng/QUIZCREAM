@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#dbeafe"/>
+  <rect x="280" y="70" width="80" height="220" fill="#667eea"/>
+  <polygon points="320,40 250,110 390,110" fill="#4f46e5"/>
+  <rect x="250" y="290" width="140" height="20" fill="#94a3b8"/>
+  <text x="320" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#1e293b">Eiffel Tower</text>
+</svg>

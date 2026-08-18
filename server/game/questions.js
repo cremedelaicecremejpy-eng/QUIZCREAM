@@ -13,6 +13,7 @@ function shuffleQuestion(q) {
   return {
     id: q.id,
     text: q.text,
+    imageUrl: q.imageUrl || null,
     options: indexed.map((item) => item.text),
     correctIndex: indexed.findIndex((item) => item.index === correctIndex)
   };
