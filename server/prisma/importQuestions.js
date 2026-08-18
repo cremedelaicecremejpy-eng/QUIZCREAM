@@ -6,9 +6,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.join(__dirname, '..');
-const csvPath = path.join(projectRoot, 'data', 'questions.csv');
-const imagesRoot = path.join(projectRoot, 'public', 'images');
+const csvPath = path.join(__dirname, '..', 'data', 'questions.csv');
 
 const REQUIRED_COLUMNS = [
   'topic',
@@ -81,23 +79,13 @@ function normalizeImageUrl(imageValue) {
   const trimmed = imageValue.trim();
   if (!trimmed) return null;
 
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    throw new Error(
+      `Image must be a full URL starting with https:// (got "${trimmed}"). Upload to Cloudinary/S3 and paste the URL.`
+    );
   }
 
-  if (trimmed.startsWith('/images/')) {
-    return trimmed;
-  }
-
-  return `/images/${trimmed.replace(/^\/+/, '')}`;
-}
-
-function imageFileExists(imageUrl) {
-  if (!imageUrl || !imageUrl.startsWith('/images/')) return true;
-
-  const relativePath = imageUrl.slice('/images/'.length);
-  const filePath = path.join(imagesRoot, relativePath);
-  return fs.existsSync(filePath);
+  return trimmed;
 }
 
 function validateRow(row, lineNumber) {
@@ -112,6 +100,8 @@ function validateRow(row, lineNumber) {
     throw new Error(`Row ${lineNumber}: correct must be A, B, C, or D.`);
   }
 
+  const rawImage = row.imageUrl || row.image || '';
+
   return {
     topic: row.topic.trim(),
     text: row.text.trim(),
@@ -120,7 +110,7 @@ function validateRow(row, lineNumber) {
     optionC: row.optionC.trim(),
     optionD: row.optionD.trim(),
     correctOption: correct,
-    imageUrl: normalizeImageUrl(row.image || row.imageUrl || '')
+    imageUrl: rawImage ? normalizeImageUrl(rawImage) : null
   };
 }
 
@@ -175,7 +165,6 @@ async function main() {
   let created = 0;
   let updated = 0;
   let withImages = 0;
-  let missingImages = 0;
 
   for (let index = 0; index < records.length; index += 1) {
     const question = validateRow(records[index], index + 2);
@@ -190,11 +179,6 @@ async function main() {
       where: { topicId: topic.id, text: question.text }
     });
 
-    if (question.imageUrl && !imageFileExists(question.imageUrl)) {
-      console.warn(`Warning row ${index + 2}: image not found for ${question.imageUrl}`);
-      missingImages += 1;
-    }
-
     await upsertQuestion(topic.id, question);
 
     if (question.imageUrl) withImages += 1;
@@ -202,10 +186,7 @@ async function main() {
     else created += 1;
   }
 
-  console.log(`Import complete: ${created} created, ${updated} updated, ${withImages} with images.`);
-  if (missingImages > 0) {
-    console.log(`${missingImages} row(s) reference image files that are not in server/public/images yet.`);
-  }
+  console.log(`Import complete: ${created} created, ${updated} updated, ${withImages} with image URLs.`);
 }
 
 main()

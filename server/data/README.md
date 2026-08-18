@@ -1,6 +1,6 @@
-# Question CSV import
+# Question CSV import (URL-only images)
 
-Add or update questions by editing `questions.csv`, then run:
+Edit `questions.csv`, then run:
 
 ```powershell
 cd server
@@ -11,22 +11,42 @@ npm run db:import
 
 | Column | Required | Example |
 |---|---|---|
-| topic | yes | Geography |
-| text | yes | What country is this? |
+| topic | yes | Flags |
+| text | yes | Which country is this flag? |
 | optionA | yes | France |
-| optionB | yes | Italy |
-| optionC | yes | Spain |
-| optionD | yes | Germany |
+| optionB | yes | Germany |
+| optionC | yes | Italy |
+| optionD | yes | Spain |
 | correct | yes | A |
-| image | no | geography/eiffel-tower.svg |
+| imageUrl | no | https://res.cloudinary.com/.../flags-france.png |
 
-## Images
+Leave `imageUrl` empty for text-only questions.
 
-1. Put files in `server/public/images/`
-2. In CSV, set `image` to the path under `images/` (example: `geography/eiffel-tower.jpg`)
-3. The import script saves `/images/geography/eiffel-tower.jpg` on the question
+## Image URLs (no local files)
 
-Supported formats: `.jpg`, `.png`, `.webp`, `.svg`
+1. Upload images to **Cloudinary**, **S3**, **ImgBB**, etc.
+2. Copy the **https://** URL
+3. Paste it in the `imageUrl` column on the same row as the question
+
+The URL **is** the link — same row = that image shows for that question.
+
+## Naming URLs for easy tagging
+
+Use predictable names when you upload:
+
+```
+https://res.cloudinary.com/your-cloud/image/upload/quizcream/flags-france.png
+https://res.cloudinary.com/your-cloud/image/upload/quizcream/flags-japan.png
+https://res.cloudinary.com/your-cloud/image/upload/quizcream/flags-brazil.png
+```
+
+You can see the country in the URL — easy to match when editing the CSV.
+
+## Example flag row
+
+```csv
+Flags,Which country is this flag?,France,UK,Germany,Italy,A,https://res.cloudinary.com/you/image/upload/quizcream/flags-france.png
+```
 
 ## Upsert behavior
 
@@ -34,8 +54,4 @@ Supported formats: `.jpg`, `.png`, `.webp`, `.svg`
 - New row → creates a new question
 - New topic name → creates the topic automatically
 
-## Deploy
-
-1. Commit images + CSV to GitHub
-2. Push (Railway serves images from `/images/...`)
-3. Run `npm run db:import` locally against Neon, or run it on Railway after deploy
+No GitHub image folders needed. Push code only; images live on your CDN.

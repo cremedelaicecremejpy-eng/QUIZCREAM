@@ -1,6 +1,6 @@
-topic,text,optionA,optionB,optionC,optionD,correct,image
-Geography,What is the capital of France?,Paris,London,Berlin,Madrid,A,geography/eiffel-tower.svg
-Geography,What is the capital of Japan?,Seoul,Tokyo,Beijing,Bangkok,B,geography/mount-fuji.svg
+topic,text,optionA,optionB,optionC,optionD,correct,imageUrl
+Flags,Which country is this flag?,France,United Kingdom,Germany,Italy,A,https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg
+Flags,Which country is this flag?,Japan,China,South Korea,Thailand,A,https://upload.wikimedia.org/wikipedia/en/9/9e/Flag_of_Japan.svg
 Geography,What is the capital of Australia?,Sydney,Melbourne,Canberra,Perth,C,
 Geography,What is the capital of Brazil?,Rio de Janeiro,São Paulo,Brasília,Salvador,C,
 Geography,Which is the largest ocean on Earth?,Atlantic,Indian,Pacific,Arctic,C,
