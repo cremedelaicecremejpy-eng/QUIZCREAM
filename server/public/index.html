@@ -1273,6 +1273,8 @@
     const MAX_POINTS = 1000;
     const POINTS_PER_MS = MAX_POINTS / TIME_LIMIT_MS;
     const QUESTION_COUNT = 7;
+    const PRE_MATCH_COUNTDOWN_SEC = 3;
+    const SOLO_ADVANCE_DELAY_MS = 1800;
 
     let socket = null;
     let gameMode = 'solo';
@@ -1291,6 +1293,7 @@
     let rafId = null;
     let timeoutId = null;
     let countdownTimeoutId = null;
+    let soloAdvanceTimeoutId = null;
     let audioCtx = null;
     let currentUser = null;
     let isGuest = false;
@@ -1735,12 +1738,59 @@
       setTimeout(() => playTone(1100, 0.2, 0.1), 120);
     }
 
-    function showCountdown(count, topicName, vsName) {
+    function showCountdown(count, topicName, vsName, { solo = false } = {}) {
       showScreen('countdown-screen');
       document.getElementById('countdown-value').textContent = String(count);
       document.getElementById('countdown-topic').textContent = topicName;
-      document.getElementById('countdown-vs').textContent = `You vs ${vsName}`;
+
+      const labelEl = document.querySelector('#countdown-screen .countdown-label');
+      const vsEl = document.getElementById('countdown-vs');
+
+      if (solo) {
+        labelEl.textContent = 'Quiz starts in';
+        vsEl.textContent = `${QUESTION_COUNT} timed questions`;
+      } else {
+        labelEl.textContent = 'Battle starts in';
+        vsEl.textContent = `You vs ${vsName}`;
+      }
+
       playCountdownBeep(count);
+    }
+
+    function clearCountdown() {
+      if (countdownTimeoutId) {
+        clearTimeout(countdownTimeoutId);
+        countdownTimeoutId = null;
+      }
+    }
+
+    function clearSoloAdvanceTimeout() {
+      if (soloAdvanceTimeoutId) {
+        clearTimeout(soloAdvanceTimeoutId);
+        soloAdvanceTimeoutId = null;
+      }
+    }
+
+    function startSoloCountdown(topicName, onComplete) {
+      clearCountdown();
+      ensureAudio();
+
+      let step = PRE_MATCH_COUNTDOWN_SEC;
+
+      const tick = () => {
+        if (step > 0) {
+          showCountdown(step, topicName, null, { solo: true });
+          step -= 1;
+          countdownTimeoutId = setTimeout(tick, 1000);
+          return;
+        }
+
+        countdownTimeoutId = null;
+        playGoBeep();
+        onComplete();
+      };
+
+      tick();
     }
 
     function drawMatchChart(roundSummary, yourLabel, opponentLabel) {
@@ -1968,7 +2018,7 @@
     function setMultiplayerUi(enabled) {
       document.getElementById('match-meta').classList.toggle('hidden', !enabled);
       document.getElementById('opponent-sidebar').classList.toggle('hidden', !enabled);
-      document.getElementById('next-btn').classList.toggle('hidden', enabled);
+      document.getElementById('next-btn').classList.add('hidden');
 
       document.getElementById('player-sidebar-title').textContent = enabled ? getNickname() : 'You';
 
@@ -2189,11 +2239,13 @@
         totalScore = 0;
         answered = false;
 
-        showScreen('quiz-screen');
         setMultiplayerUi(false);
-        document.getElementById('player-sidebar-title').textContent = getNickname();
-        updateLiveScore(false);
-        loadQuestion();
+        startSoloCountdown(topicName, () => {
+          showScreen('quiz-screen');
+          document.getElementById('player-sidebar-title').textContent = getNickname();
+          updateLiveScore(false);
+          loadQuestion();
+        });
       } catch (error) {
         errorEl.textContent = error.message;
       }
@@ -2334,9 +2386,11 @@
           feedback.className = 'feedback wrong';
         }
 
-        const nextBtn = document.getElementById('next-btn');
-        nextBtn.textContent = currentIndex === questions.length - 1 ? 'See Results' : 'Next Question';
-        nextBtn.classList.remove('hidden');
+        clearSoloAdvanceTimeout();
+        soloAdvanceTimeoutId = setTimeout(() => {
+          soloAdvanceTimeoutId = null;
+          nextQuestion();
+        }, SOLO_ADVANCE_DELAY_MS);
       } else {
         if (isCorrect) {
           feedback.textContent = `Correct! +${points} pts`;
@@ -2392,10 +2446,6 @@
       document.getElementById('feedback').className = 'feedback';
       document.getElementById('opponent-pick-label').classList.add('hidden');
       document.getElementById('opponent-pick-label').textContent = '';
-
-      if (gameMode === 'solo') {
-        document.getElementById('next-btn').classList.add('hidden');
-      }
 
       const optionsEl = document.getElementById('options');
       optionsEl.innerHTML = '';
@@ -2480,6 +2530,7 @@
 
     function showScore() {
       clearTimer();
+      clearSoloAdvanceTimeout();
       showScreen('score-screen');
       document.getElementById('score-value').textContent = totalScore.toLocaleString();
       document.getElementById('score-label').textContent =
@@ -2488,6 +2539,8 @@
 
     function restartQuiz() {
       clearTimer();
+      clearCountdown();
+      clearSoloAdvanceTimeout();
       if (socket) socket.emit('queue:leave');
 
       gameMode = 'solo';
