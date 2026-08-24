@@ -1541,6 +1541,7 @@
     let correctCount = 0;
     let totalScore = 0;
     let questionStartedAt = 0;
+    let activeRoundStartedAt = null;
     let rafId = null;
     let timeoutId = null;
     let countdownTimeoutId = null;
@@ -1958,6 +1959,8 @@
     async function initApp() {
       updateSoundToggle();
       document.getElementById('card').classList.add('card-enter');
+      document.addEventListener('visibilitychange', handleVisibilityResume);
+      window.addEventListener('focus', handleVisibilityResume);
       await loadAuthConfig();
       handleVerificationRedirect();
 
@@ -2249,6 +2252,43 @@
         }
         onComplete();
       }, QUESTION_EXIT_MS);
+    }
+
+    function resetQuestionTransitionOverlay() {
+      const overlay = document.getElementById('question-transition');
+      if (!overlay) return;
+      overlay.classList.add('hidden');
+      overlay.classList.remove('visible');
+    }
+
+    function flashRoundTransitionLabel(questionNumber, count) {
+      const overlay = document.getElementById('question-transition');
+      const label = document.getElementById('question-transition-label');
+      if (!overlay || !label || prefersReducedMotion()) return;
+
+      label.textContent = isLastRound(questionNumber - 1, count)
+        ? 'Final round · 2× points'
+        : `Question ${questionNumber} of ${count}`;
+      overlay.classList.remove('hidden');
+      overlay.classList.add('visible');
+
+      setTimeout(() => {
+        overlay.classList.remove('visible');
+        setTimeout(() => overlay.classList.add('hidden'), 220);
+      }, 320);
+    }
+
+    function syncTimerFromServerStart() {
+      if (gameMode !== 'multiplayer' || answered || !activeRoundStartedAt) return;
+      if (currentScreenId !== 'quiz-screen') return;
+
+      startTimer(activeRoundStartedAt);
+    }
+
+    function handleVisibilityResume() {
+      if (document.visibilityState !== 'visible') return;
+      ensureAudio();
+      syncTimerFromServerStart();
     }
 
     function animateQuestionTransition(onMidpoint, { nextQuestionNumber = null } = {}) {
@@ -2636,6 +2676,7 @@
           updateOpponentScore();
 
           const startRound = () => {
+            resetQuestionTransitionOverlay();
             loadQuestion(data.startedAt);
             animateQuestionEnter();
             playQuestionStartSound();
@@ -2643,16 +2684,26 @@
               startBackgroundMusic();
             } else {
               updateBackgroundMusicIntensity(currentIndex, totalQuestions);
+              flashRoundTransitionLabel(data.questionIndex + 1, data.totalQuestions);
             }
           };
 
-          if (data.questionIndex > 0) {
-            animateQuestionTransition(startRound, {
-              nextQuestionNumber: data.questionIndex + 1
-            });
-          } else {
-            startRound();
-          }
+          startRound();
+        });
+
+        socket.on('disconnect', () => {
+          if (gameMode !== 'multiplayer' || currentScreenId !== 'quiz-screen') return;
+
+          const feedback = document.getElementById('feedback');
+          feedback.textContent = 'Connection lost — check your internet and refresh if stuck.';
+          feedback.className = 'feedback wrong';
+        });
+
+        socket.on('connect', () => {
+          if (gameMode !== 'multiplayer' || currentScreenId !== 'quiz-screen') return;
+          if (answered) return;
+
+          syncTimerFromServerStart();
         });
 
         socket.on('opponent:answered', (data) => {
@@ -3117,6 +3168,8 @@
       const q = gameMode === 'multiplayer' ? currentQuestion : questions[currentIndex];
       const count = getQuestionCount();
       answered = false;
+      activeRoundStartedAt = serverStartedAt || Date.now();
+      resetQuestionTransitionOverlay();
 
       document.getElementById('progress').textContent =
         `${selectedTopicName} · Q${currentIndex + 1}/${count}`;
@@ -3144,7 +3197,7 @@
         optionsEl.appendChild(btn);
       });
 
-      startTimer(serverStartedAt);
+      startTimer(serverStartedAt || activeRoundStartedAt);
     }
 
     function checkAnswer(selectedIndex) {
@@ -3241,6 +3294,7 @@
       clearCountdown();
       clearSoloAdvanceTimeout();
       stopBackgroundMusic();
+      activeRoundStartedAt = null;
       if (socket) socket.emit('queue:leave');
 
       gameMode = 'solo';
