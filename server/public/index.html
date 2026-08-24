@@ -965,6 +965,44 @@
       margin-bottom: 1.25rem;
     }
 
+    .auth-method-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .auth-method-tab {
+      flex: 1;
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: 2px solid #ececf4;
+      border-radius: 10px;
+      background: #f8f8fc;
+      color: #6b7280;
+      cursor: pointer;
+    }
+
+    .auth-method-tab.active {
+      border-color: #667eea;
+      background: #ffffff;
+      color: #667eea;
+    }
+
+    .otp-input {
+      letter-spacing: 0.35em;
+      text-align: center;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .auth-hint {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+
     .auth-tab {
       flex: 1;
       padding: 0.625rem 0.75rem;
@@ -1241,6 +1279,11 @@
       <h1>Quiz Cream</h1>
       <p class="subtitle">Sign in to save wins and match history — or play as a guest.</p>
 
+      <div class="auth-method-tabs">
+        <button id="auth-method-email" class="auth-method-tab active" type="button" onclick="showAuthChannel('email')">Email</button>
+        <button id="auth-method-phone" class="auth-method-tab" type="button" onclick="showAuthChannel('phone')">Phone</button>
+      </div>
+
       <div class="auth-tabs">
         <button id="auth-tab-login" class="auth-tab active" type="button" onclick="showAuthMode('login')">Sign In</button>
         <button id="auth-tab-register" class="auth-tab" type="button" onclick="showAuthMode('register')">Create Account</button>
@@ -1269,6 +1312,24 @@
         <button class="auth-submit" type="submit">Create Account</button>
       </form>
 
+      <form id="phone-login-form" class="auth-form hidden" onsubmit="handlePhoneSendOtp(event, 'login')">
+        <label for="phone-login-number">Phone number</label>
+        <input id="phone-login-number" type="tel" autocomplete="tel" placeholder="+91 98765 43210" />
+        <p class="auth-hint">Include country code. India numbers can start with 10 digits.</p>
+        <button class="auth-submit" type="submit">Send login code</button>
+      </form>
+
+      <form id="phone-register-form" class="auth-form hidden" onsubmit="handlePhoneSendOtp(event, 'signup')">
+        <label for="phone-register-number">Phone number</label>
+        <input id="phone-register-number" type="tel" autocomplete="tel" placeholder="+91 98765 43210" />
+
+        <label for="phone-register-username">Username</label>
+        <input id="phone-register-username" type="text" maxlength="20" autocomplete="username" placeholder="Pick a username" />
+
+        <p class="auth-hint">We will text you a 6-digit code to verify your phone.</p>
+        <button class="auth-submit" type="submit">Send signup code</button>
+      </form>
+
       <p id="auth-error" class="error-msg"></p>
       <p id="auth-success" class="auth-success hidden"></p>
 
@@ -1287,12 +1348,36 @@
         We sent a verification link to<br />
         <span id="verify-email-display" class="verify-email"></span>
       </p>
-      <p class="subtitle">Click the link in that email to activate your account, then sign in.</p>
+      <p class="subtitle">Click the link in that email to activate your account, or enter the 6-digit code below.</p>
+      <form class="auth-form" onsubmit="handleVerifyEmailCode(event)">
+        <label for="verify-email-code">6-digit code</label>
+        <input id="verify-email-code" class="otp-input" type="text" inputmode="numeric" maxlength="6" placeholder="123456" />
+        <button class="auth-submit" type="submit">Verify with code</button>
+      </form>
       <div class="verify-actions">
         <button class="auth-submit" type="button" onclick="resendVerificationEmail()">Resend email</button>
         <button class="verify-secondary" type="button" onclick="backToAuthFromVerify()">Back to sign in</button>
       </div>
       <p id="verify-status" class="error-msg"></p>
+    </div>
+
+    <div id="phone-otp-screen" class="auth-screen verify-screen screen-panel hidden">
+      <div class="verify-icon">📱</div>
+      <h1>Enter your code</h1>
+      <p class="verify-message">
+        We sent a 6-digit code to<br />
+        <span id="phone-otp-display" class="verify-email"></span>
+      </p>
+      <form class="auth-form" onsubmit="handlePhoneVerifyOtp(event)">
+        <label for="phone-otp-code">6-digit code</label>
+        <input id="phone-otp-code" class="otp-input" type="text" inputmode="numeric" maxlength="6" placeholder="123456" required />
+        <button class="auth-submit" type="submit">Continue</button>
+      </form>
+      <div class="verify-actions">
+        <button class="auth-submit" type="button" onclick="resendPhoneOtp()">Resend code</button>
+        <button class="verify-secondary" type="button" onclick="backToAuthFromPhoneOtp()">Back</button>
+      </div>
+      <p id="phone-otp-status" class="error-msg"></p>
     </div>
 
     <div id="topic-screen" class="topic-screen screen-panel hidden">
@@ -1518,6 +1603,7 @@
     const ALL_SCREENS = [
       'auth-screen',
       'verify-screen',
+      'phone-otp-screen',
       'topic-screen',
       'history-screen',
       'waiting-screen',
@@ -1552,6 +1638,10 @@
     let googleClientId = null;
     let pendingVerifyEmail = '';
     let emailVerificationEnabled = false;
+    let phoneOtpEnabled = false;
+    let authChannel = 'email';
+    let pendingPhone = '';
+    let pendingPhoneMode = 'login';
     let soundEnabled = localStorage.getItem(SOUND_ENABLED_KEY) !== 'false';
     let currentScreenId = 'auth-screen';
     let bgMusic = {
@@ -1722,18 +1812,150 @@
       }
     }
 
+    function showAuthChannel(channel) {
+      authChannel = channel;
+      document.getElementById('auth-method-email').classList.toggle('active', channel === 'email');
+      document.getElementById('auth-method-phone').classList.toggle('active', channel === 'phone');
+      document.getElementById('auth-error').textContent = '';
+
+      const isLogin = document.getElementById('auth-tab-login').classList.contains('active');
+      document.getElementById('login-form').classList.toggle('hidden', channel !== 'email' || !isLogin);
+      document.getElementById('register-form').classList.toggle('hidden', channel !== 'email' || isLogin);
+      document.getElementById('phone-login-form').classList.toggle('hidden', channel !== 'phone' || !isLogin);
+      document.getElementById('phone-register-form').classList.toggle('hidden', channel !== 'phone' || isLogin);
+      document.getElementById('google-auth-wrap').classList.toggle('hidden', channel !== 'email' || !googleClientId);
+    }
+
     function showAuthMode(mode) {
       document.getElementById('auth-tab-login').classList.toggle('active', mode === 'login');
       document.getElementById('auth-tab-register').classList.toggle('active', mode === 'register');
-      document.getElementById('login-form').classList.toggle('hidden', mode !== 'login');
-      document.getElementById('register-form').classList.toggle('hidden', mode !== 'register');
       document.getElementById('auth-error').textContent = '';
       document.getElementById('auth-success').classList.add('hidden');
+      showAuthChannel(authChannel);
 
-      const activeForm = document.getElementById(mode === 'login' ? 'login-form' : 'register-form');
+      const activeFormId =
+        authChannel === 'phone'
+          ? mode === 'login'
+            ? 'phone-login-form'
+            : 'phone-register-form'
+          : mode === 'login'
+            ? 'login-form'
+            : 'register-form';
+      const activeForm = document.getElementById(activeFormId);
       activeForm.classList.remove('form-swap');
       void activeForm.offsetWidth;
       activeForm.classList.add('form-swap');
+    }
+
+    async function handleVerifyEmailCode(event) {
+      event.preventDefault();
+      document.getElementById('verify-status').textContent = '';
+
+      try {
+        const data = await authFetch('/api/auth/verify-email-code', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: pendingVerifyEmail,
+            code: document.getElementById('verify-email-code').value.trim()
+          })
+        });
+
+        saveSession(data.token, data.user);
+        showScreen('topic-screen');
+        loadTopics();
+      } catch (error) {
+        document.getElementById('verify-status').textContent = error.message;
+      }
+    }
+
+    function showPhoneOtpScreen(phone, mode) {
+      pendingPhone = phone;
+      pendingPhoneMode = mode;
+      document.getElementById('phone-otp-display').textContent = phone;
+      document.getElementById('phone-otp-code').value = '';
+      document.getElementById('phone-otp-status').textContent = '';
+      showScreen('phone-otp-screen');
+    }
+
+    function backToAuthFromPhoneOtp() {
+      pendingPhone = '';
+      pendingPhoneMode = 'login';
+      document.getElementById('phone-otp-status').textContent = '';
+      showAuthMode(pendingPhoneMode === 'signup' ? 'register' : 'login');
+      showScreen('auth-screen');
+    }
+
+    async function handlePhoneSendOtp(event, mode) {
+      event.preventDefault();
+      document.getElementById('auth-error').textContent = '';
+
+      if (!phoneOtpEnabled) {
+        document.getElementById('auth-error').textContent =
+          'Phone sign-in is not set up yet. Use email or guest mode.';
+        return;
+      }
+
+      const phone =
+        mode === 'login'
+          ? document.getElementById('phone-login-number').value
+          : document.getElementById('phone-register-number').value;
+      const username =
+        mode === 'signup' ? document.getElementById('phone-register-username').value : '';
+
+      try {
+        const data = await authFetch('/api/auth/phone/send-otp', {
+          method: 'POST',
+          body: JSON.stringify({ phone, mode, username })
+        });
+        showPhoneOtpScreen(data.phone, mode);
+      } catch (error) {
+        document.getElementById('auth-error').textContent = error.message;
+      }
+    }
+
+    async function handlePhoneVerifyOtp(event) {
+      event.preventDefault();
+      document.getElementById('phone-otp-status').textContent = '';
+
+      try {
+        const data = await authFetch('/api/auth/phone/verify-otp', {
+          method: 'POST',
+          body: JSON.stringify({
+            phone: pendingPhone,
+            code: document.getElementById('phone-otp-code').value.trim(),
+            mode: pendingPhoneMode
+          })
+        });
+
+        pendingPhone = '';
+        saveSession(data.token, data.user);
+        showScreen('topic-screen');
+        loadTopics();
+      } catch (error) {
+        document.getElementById('phone-otp-status').textContent = error.message;
+      }
+    }
+
+    async function resendPhoneOtp() {
+      if (!pendingPhone) return;
+
+      document.getElementById('phone-otp-status').textContent = '';
+
+      try {
+        const data = await authFetch('/api/auth/phone/send-otp', {
+          method: 'POST',
+          body: JSON.stringify({
+            phone: pendingPhone,
+            mode: pendingPhoneMode,
+            username: document.getElementById('phone-register-username').value
+          })
+        });
+        document.getElementById('phone-otp-status').textContent = data.message;
+        document.getElementById('phone-otp-status').style.color = '#059669';
+      } catch (error) {
+        document.getElementById('phone-otp-status').textContent = error.message;
+        document.getElementById('phone-otp-status').style.color = '';
+      }
     }
 
     function showVerifyScreen(email) {
@@ -1929,6 +2151,14 @@
         const config = await fetch(`${API_BASE}/api/auth/config`).then((r) => r.json());
         googleClientId = config.googleClientId;
         emailVerificationEnabled = Boolean(config.emailVerificationEnabled);
+        phoneOtpEnabled = Boolean(config.phoneOtpEnabled);
+
+        document.getElementById('auth-method-phone').classList.toggle('hidden', !phoneOtpEnabled);
+        if (!phoneOtpEnabled && authChannel === 'phone') {
+          showAuthChannel('email');
+        } else {
+          showAuthChannel(authChannel);
+        }
 
         if (googleClientId) {
           if (window.google?.accounts?.id) {
@@ -1938,7 +2168,7 @@
           }
         }
       } catch (_error) {
-        // Google sign-in stays hidden if config fails to load.
+        showAuthChannel('email');
       }
     }
 

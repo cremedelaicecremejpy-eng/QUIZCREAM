@@ -6,11 +6,23 @@ import { isGoogleAuthConfigured, verifyGoogleCredential } from '../auth/google.j
 import {
   canResendVerification,
   createVerificationToken,
+  createEmailOtpPayload,
   getVerificationExpiry,
   isEmailVerificationEnabled,
   isValidEmailFormat,
-  sendVerificationEmail
+  sendVerificationEmail,
+  verifyEmailOtp
 } from '../auth/email.js';
+import {
+  canResendOtp,
+  createPhoneOtpPayload,
+  isPhoneOtpEnabled,
+  maskPhone,
+  normalizePhone,
+  sendPhoneOtpSms,
+  syntheticEmailForPhone,
+  verifyPhoneOtp
+} from '../auth/phone.js';
 import { publicUser } from '../auth/userFields.js';
 import { requireAuth } from '../middleware/auth.js';
 
@@ -49,19 +61,25 @@ async function uniqueUsername(baseUsername) {
 async function issueVerification(user) {
   const token = createVerificationToken();
   const verificationTokenExpiresAt = getVerificationExpiry();
+  const emailOtp = createEmailOtpPayload();
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
       verificationToken: token,
-      verificationTokenExpiresAt
+      verificationTokenExpiresAt,
+      emailOtpHash: emailOtp.emailOtpHash,
+      emailOtpExpiresAt: emailOtp.emailOtpExpiresAt,
+      emailOtpSentAt: emailOtp.emailOtpSentAt,
+      emailOtpAttempts: 0
     }
   });
 
   await sendVerificationEmail({
     email: user.email,
     username: user.username,
-    token
+    token,
+    otpCode: emailOtp.code
   });
 }
 
@@ -77,7 +95,8 @@ router.get('/config', (_req, res) => {
   res.json({
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
     googleEnabled: isGoogleAuthConfigured(),
-    emailVerificationEnabled: isEmailVerificationEnabled()
+    emailVerificationEnabled: isEmailVerificationEnabled(),
+    phoneOtpEnabled: isPhoneOtpEnabled()
   });
 });
 
@@ -107,13 +126,204 @@ router.get('/verify-email', async (req, res) => {
       data: {
         emailVerified: true,
         verificationToken: null,
-        verificationTokenExpiresAt: null
+        verificationTokenExpiresAt: null,
+        emailOtpHash: null,
+        emailOtpExpiresAt: null,
+        emailOtpSentAt: null,
+        emailOtpAttempts: 0
       }
     });
 
     return res.redirect(`${appBaseUrl()}/?verified=success`);
   } catch (_error) {
     return res.redirect(`${appBaseUrl()}/?verified=error`);
+  }
+});
+
+router.post('/verify-email-code', async (req, res) => {
+  try {
+    const email = sanitizeEmail(req.body.email);
+    const code = String(req.body.code || '').trim();
+
+    if (!isValidEmailFormat(email)) {
+      return res.status(400).json({ message: 'Enter a valid email address.' });
+    }
+
+    if (!/^\d{6}$/.test(code)) {
+      return res.status(400).json({ message: 'Enter the 6-digit code from your email.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user || user.emailVerified) {
+      return res.status(400).json({ message: 'Invalid verification request.' });
+    }
+
+    try {
+      verifyEmailOtp(user, code);
+    } catch (error) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { emailOtpAttempts: user.emailOtpAttempts + 1 }
+      });
+      throw error;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        verificationToken: null,
+        verificationTokenExpiresAt: null,
+        emailOtpHash: null,
+        emailOtpExpiresAt: null,
+        emailOtpSentAt: null,
+        emailOtpAttempts: 0
+      }
+    });
+
+    const token = signToken(updated);
+    res.json({
+      message: 'Email verified.',
+      token,
+      user: publicUser(updated)
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.post('/phone/send-otp', async (req, res) => {
+  try {
+    if (!isPhoneOtpEnabled()) {
+      return res.status(400).json({ message: 'Phone sign-in is not configured yet.' });
+    }
+
+    const phone = normalizePhone(req.body.phone);
+    const mode = String(req.body.mode || 'login');
+    const username = sanitizeUsername(req.body.username);
+
+    if (mode === 'signup') {
+      if (username.length < 3) {
+        return res.status(400).json({ message: 'Username must be at least 3 characters.' });
+      }
+
+      const existingPhone = await prisma.user.findUnique({ where: { phone } });
+      if (existingPhone?.phoneVerified) {
+        return res.status(409).json({ message: 'An account with this phone already exists.' });
+      }
+
+      const existingUsername = await prisma.user.findUnique({ where: { username } });
+      if (existingUsername && existingUsername.phone !== phone) {
+        return res.status(409).json({ message: 'That username is already taken.' });
+      }
+
+      if (existingPhone && !canResendOtp(existingPhone.phoneOtpSentAt)) {
+        return res.status(429).json({ message: 'Please wait a minute before requesting another code.' });
+      }
+
+      const otp = createPhoneOtpPayload();
+      const user = existingPhone
+        ? await prisma.user.update({
+            where: { id: existingPhone.id },
+            data: {
+              username,
+              ...otp
+            }
+          })
+        : await prisma.user.create({
+            data: {
+              email: syntheticEmailForPhone(phone),
+              username,
+              phone,
+              phoneVerified: false,
+              emailVerified: true,
+              ...otp
+            }
+          });
+
+      await sendPhoneOtpSms({ phone, code: otp.code });
+      return res.json({
+        message: `Code sent to ${maskPhone(phone)}.`,
+        phone,
+        mode: 'signup'
+      });
+    }
+
+    const user = await prisma.user.findUnique({ where: { phone } });
+    if (!user || !user.phoneVerified) {
+      return res.status(404).json({ message: 'No account found for this phone number.' });
+    }
+
+    if (!canResendOtp(user.phoneOtpSentAt)) {
+      return res.status(429).json({ message: 'Please wait a minute before requesting another code.' });
+    }
+
+    const otp = createPhoneOtpPayload();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: otp
+    });
+
+    await sendPhoneOtpSms({ phone, code: otp.code });
+    res.json({
+      message: `Code sent to ${maskPhone(phone)}.`,
+      phone,
+      mode: 'login'
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.post('/phone/verify-otp', async (req, res) => {
+  try {
+    if (!isPhoneOtpEnabled()) {
+      return res.status(400).json({ message: 'Phone sign-in is not configured yet.' });
+    }
+
+    const phone = normalizePhone(req.body.phone);
+    const code = String(req.body.code || '').trim();
+    const mode = String(req.body.mode || 'login');
+
+    if (!/^\d{6}$/.test(code)) {
+      return res.status(400).json({ message: 'Enter the 6-digit code from your SMS.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { phone } });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found for this phone number.' });
+    }
+
+    try {
+      verifyPhoneOtp(user, code);
+    } catch (error) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { phoneOtpAttempts: user.phoneOtpAttempts + 1 }
+      });
+      throw error;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        phoneVerified: true,
+        phoneOtpHash: null,
+        phoneOtpExpiresAt: null,
+        phoneOtpSentAt: null,
+        phoneOtpAttempts: 0
+      }
+    });
+
+    const token = signToken(updated);
+    res.json({
+      message: mode === 'signup' ? 'Account created.' : 'Signed in.',
+      token,
+      user: publicUser(updated)
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 

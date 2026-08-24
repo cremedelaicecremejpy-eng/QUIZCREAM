@@ -1,7 +1,10 @@
 import crypto from 'crypto';
+import { generateOtpCode, getOtpExpiry, hashOtp, verifyOtpCode, canResendOtp as canResendOtpBase, isOtpExpired, MAX_OTP_ATTEMPTS } from './otp.js';
 
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const RESEND_MIN_INTERVAL_MS = 60 * 1000;
+
+export { MAX_OTP_ATTEMPTS };
 
 export function isEmailVerificationEnabled() {
   return Boolean(process.env.RESEND_API_KEY);
@@ -16,6 +19,10 @@ export function getVerificationExpiry() {
 }
 
 export function canResendVerification(user) {
+  if (user.emailOtpSentAt && !canResendOtpBase(user.emailOtpSentAt)) {
+    return false;
+  }
+
   if (!user.verificationTokenExpiresAt) return true;
 
   const tokenCreatedAt =
@@ -23,11 +30,39 @@ export function canResendVerification(user) {
   return Date.now() - tokenCreatedAt >= RESEND_MIN_INTERVAL_MS;
 }
 
+export function createEmailOtpPayload() {
+  const code = generateOtpCode();
+
+  return {
+    code,
+    emailOtpHash: hashOtp(code),
+    emailOtpExpiresAt: getOtpExpiry(),
+    emailOtpSentAt: new Date(),
+    emailOtpAttempts: 0
+  };
+}
+
+export function verifyEmailOtp(user, code) {
+  if (!user.emailOtpHash || isOtpExpired(user.emailOtpExpiresAt)) {
+    throw new Error('That code expired. Request a new one.');
+  }
+
+  if (user.emailOtpAttempts >= MAX_OTP_ATTEMPTS) {
+    throw new Error('Too many incorrect attempts. Request a new code.');
+  }
+
+  if (!verifyOtpCode(code, user.emailOtpHash)) {
+    throw new Error('Invalid code.');
+  }
+
+  return true;
+}
+
 export function isValidEmailFormat(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export async function sendVerificationEmail({ email, username, token }) {
+export async function sendVerificationEmail({ email, username, token, otpCode }) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM || 'QUIZCREAM <onboarding@resend.dev>';
   const appUrl = (process.env.APP_URL || 'http://localhost:3001').replace(/\/$/, '');
@@ -37,6 +72,10 @@ export async function sendVerificationEmail({ email, username, token }) {
   }
 
   const verifyUrl = `${appUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+  const otpBlock = otpCode
+    ? `<p style="font-size: 28px; font-weight: 700; letter-spacing: 0.3em; color: #667eea; margin: 1.5rem 0;">${otpCode}</p>
+       <p style="color: #6b7280; font-size: 14px;">Or enter this 6-digit code on the verify screen. It expires in 10 minutes.</p>`
+    : '';
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -52,13 +91,14 @@ export async function sendVerificationEmail({ email, username, token }) {
         <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; color: #111827;">
           <h1 style="color: #667eea; margin-bottom: 0.5rem;">Quiz Cream</h1>
           <p>Hi ${username},</p>
-          <p>Thanks for signing up. Click the button below to verify your email and start playing.</p>
+          <p>Thanks for signing up. Verify your email using the code below or the button.</p>
+          ${otpBlock}
           <p style="margin: 2rem 0;">
             <a href="${verifyUrl}" style="background: #667eea; color: #ffffff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 600;">
               Verify email
             </a>
           </p>
-          <p style="color: #6b7280; font-size: 14px;">This link expires in 24 hours.</p>
+          <p style="color: #6b7280; font-size: 14px;">The link expires in 24 hours.</p>
           <p style="color: #6b7280; font-size: 14px;">If the button does not work, copy this link into your browser:</p>
           <p style="color: #6b7280; font-size: 14px; word-break: break-all;">${verifyUrl}</p>
         </div>

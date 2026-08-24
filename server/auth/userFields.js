@@ -15,6 +15,8 @@ export function publicUser(user) {
     id: user.id,
     email: user.email,
     username: user.username,
+    phone: user.phone || null,
+    phoneVerified: Boolean(user.phoneVerified),
     wins: user.wins,
     losses: user.losses,
     isPro: user.isPro,

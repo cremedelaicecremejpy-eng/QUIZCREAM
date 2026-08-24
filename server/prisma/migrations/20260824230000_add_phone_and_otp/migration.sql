@@ -1,0 +1,14 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "phone" TEXT;
+ALTER TABLE "User" ADD COLUMN "phoneVerified" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN "phoneOtpHash" TEXT;
+ALTER TABLE "User" ADD COLUMN "phoneOtpExpiresAt" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN "phoneOtpSentAt" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN "phoneOtpAttempts" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN "emailOtpHash" TEXT;
+ALTER TABLE "User" ADD COLUMN "emailOtpExpiresAt" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN "emailOtpSentAt" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN "emailOtpAttempts" INTEGER NOT NULL DEFAULT 0;
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_phone_key" ON "User"("phone");

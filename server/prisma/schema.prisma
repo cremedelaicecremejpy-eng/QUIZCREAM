@@ -39,9 +39,19 @@ model User {
   username                   String    @unique
   password                   String?
   googleId                   String?   @unique
+  phone                      String?   @unique
+  phoneVerified              Boolean   @default(false)
+  phoneOtpHash               String?
+  phoneOtpExpiresAt          DateTime?
+  phoneOtpSentAt             DateTime?
+  phoneOtpAttempts           Int       @default(0)
   emailVerified              Boolean   @default(false)
   verificationToken          String?   @unique
   verificationTokenExpiresAt DateTime?
+  emailOtpHash               String?
+  emailOtpExpiresAt          DateTime?
+  emailOtpSentAt             DateTime?
+  emailOtpAttempts           Int       @default(0)
   wins                       Int       @default(0)
   losses                     Int       @default(0)
   isPro                      Boolean   @default(false)
