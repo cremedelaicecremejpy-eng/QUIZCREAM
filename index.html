@@ -23,6 +23,13 @@
       padding: 1.5rem;
     }
 
+    :root {
+      --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+      --duration-fast: 0.22s;
+      --duration-normal: 0.34s;
+      --duration-slow: 0.48s;
+    }
+
     .card {
       background: #ffffff;
       border-radius: 16px;
@@ -31,6 +38,94 @@
       max-width: 480px;
       width: 100%;
       text-align: center;
+      transition:
+        max-width var(--duration-normal) var(--ease-smooth),
+        padding var(--duration-normal) var(--ease-smooth),
+        transform var(--duration-normal) var(--ease-smooth);
+    }
+
+    .card.card-enter {
+      animation: card-rise var(--duration-slow) var(--ease-smooth);
+    }
+
+    @keyframes card-rise {
+      from { opacity: 0; transform: translateY(18px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .screen-panel {
+      transition:
+        opacity var(--duration-normal) var(--ease-smooth),
+        transform var(--duration-normal) var(--ease-smooth);
+    }
+
+    .screen-panel.screen-leaving {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.985);
+      pointer-events: none;
+    }
+
+    .screen-panel.screen-entering {
+      opacity: 0;
+      transform: translateY(16px) scale(0.985);
+    }
+
+    .screen-panel.screen-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .screen-stagger {
+      animation: stagger-rise 0.44s var(--ease-smooth) backwards;
+    }
+
+    @keyframes stagger-rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .auth-form.form-swap {
+      animation: form-fade 0.3s var(--ease-smooth);
+    }
+
+    @keyframes form-fade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .feedback.feedback-pop {
+      animation: feedback-pop 0.45s var(--ease-smooth);
+    }
+
+    @keyframes feedback-pop {
+      0% { opacity: 0; transform: translateY(8px) scale(0.96); }
+      60% { transform: translateY(-2px) scale(1.02); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .options button.selected-correct,
+    .options button.selected-wrong {
+      animation: answer-reveal 0.38s var(--ease-smooth);
+    }
+
+    @keyframes answer-reveal {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.025); }
+      100% { transform: scale(1); }
+    }
+
+    .score-value.counting,
+    .match-scores .value.counting {
+      transition: color var(--duration-fast) ease;
+    }
+
+    .summary-chart-wrap.chart-enter {
+      animation: chart-rise 0.55s var(--ease-smooth) backwards;
+    }
+
+    @keyframes chart-rise {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .card.quiz-layout {
@@ -132,7 +227,9 @@
       flex: 1;
       min-width: 0;
       text-align: center;
-      transition: opacity 0.26s ease, transform 0.26s ease;
+      transition:
+        opacity 0.34s var(--ease-smooth),
+        transform 0.34s var(--ease-smooth);
     }
 
     .quiz-main.question-leaving {
@@ -164,7 +261,7 @@
       background: rgba(255, 255, 255, 0.94);
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.22s ease;
+      transition: opacity 0.28s var(--ease-smooth);
     }
 
     .question-transition.hidden {
@@ -222,10 +319,28 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+      :root {
+        --duration-fast: 0.01ms;
+        --duration-normal: 0.01ms;
+        --duration-slow: 0.01ms;
+      }
+
+      .card,
+      .card.card-enter,
+      .screen-panel,
+      .screen-stagger,
+      .auth-form.form-swap,
+      .feedback.feedback-pop,
       .quiz-main,
       .question-transition,
       .options button.option-enter,
-      .question-transition-label {
+      .options button.selected-correct,
+      .options button.selected-wrong,
+      .question-transition-label,
+      .question-image,
+      .summary-chart-wrap.chart-enter,
+      .waiting-spinner,
+      .card .question.question-reveal {
         transition: none !important;
         animation: none !important;
       }
@@ -308,6 +423,15 @@
       margin-bottom: 2rem;
     }
 
+    .card .question.question-reveal {
+      animation: question-reveal 0.38s var(--ease-smooth);
+    }
+
+    @keyframes question-reveal {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .question-image {
       display: block;
       width: 100%;
@@ -316,6 +440,12 @@
       border-radius: 12px;
       background: #f4f4f8;
       margin: 0 auto 1rem;
+      opacity: 0;
+      transition: opacity 0.38s var(--ease-smooth);
+    }
+
+    .question-image.question-image-visible {
+      opacity: 1;
     }
 
     .question-image.hidden {
@@ -1105,7 +1235,7 @@
 </head>
 <body>
   <div id="card" class="card">
-    <div id="auth-screen" class="auth-screen">
+    <div id="auth-screen" class="auth-screen screen-panel screen-visible">
       <h1>Quiz Cream</h1>
       <p class="subtitle">Sign in to save wins and match history — or play as a guest.</p>
 
@@ -1148,7 +1278,7 @@
       <button class="guest-btn" type="button" onclick="continueAsGuest()">Continue as guest</button>
     </div>
 
-    <div id="verify-screen" class="auth-screen verify-screen hidden">
+    <div id="verify-screen" class="auth-screen verify-screen screen-panel hidden">
       <div class="verify-icon">📧</div>
       <h1>Check your email</h1>
       <p class="verify-message">
@@ -1163,7 +1293,7 @@
       <p id="verify-status" class="error-msg"></p>
     </div>
 
-    <div id="topic-screen" class="topic-screen hidden">
+    <div id="topic-screen" class="topic-screen screen-panel hidden">
       <h1>Quiz Cream</h1>
       <p class="subtitle">Solo practice or 1v1 battle — 7 questions, 7 seconds each.</p>
 
@@ -1184,7 +1314,7 @@
       <p id="topic-error" class="error-msg"></p>
     </div>
 
-    <div id="history-screen" class="history-screen hidden">
+    <div id="history-screen" class="history-screen screen-panel hidden">
       <div class="history-header">
         <h1>My Stats</h1>
         <button class="back-btn" type="button" onclick="showScreen('topic-screen')">Back</button>
@@ -1248,7 +1378,7 @@
       <p id="history-empty" class="guest-note hidden">No saved 1v1 matches yet. Sign in and play a battle!</p>
     </div>
 
-    <div id="waiting-screen" class="waiting-screen hidden">
+    <div id="waiting-screen" class="waiting-screen screen-panel hidden">
       <h1>Finding Match</h1>
       <div class="waiting-spinner">⚔️</div>
       <p id="waiting-topic" class="waiting-topic"></p>
@@ -1256,7 +1386,7 @@
       <button class="cancel-btn" onclick="cancelMatchmaking()">Cancel</button>
     </div>
 
-    <div id="countdown-screen" class="countdown-screen hidden">
+    <div id="countdown-screen" class="countdown-screen screen-panel hidden">
       <h1>Get Ready</h1>
       <p id="countdown-topic" class="countdown-topic"></p>
       <p class="countdown-label">Battle starts in</p>
@@ -1264,7 +1394,7 @@
       <p id="countdown-vs" class="countdown-vs"></p>
     </div>
 
-    <div id="quiz-screen" class="quiz-screen hidden">
+    <div id="quiz-screen" class="quiz-screen screen-panel hidden">
       <div class="timer-top">
         <div class="timer-row">
           <span class="progress" id="progress"></span>
@@ -1314,7 +1444,7 @@
       </div>
     </div>
 
-    <div id="match-score-screen" class="match-score-screen hidden">
+    <div id="match-score-screen" class="match-score-screen screen-panel hidden">
       <h1>Battle Over</h1>
       <p id="match-result" class="match-result"></p>
       <div class="match-scores">
@@ -1355,7 +1485,7 @@
       </div>
     </div>
 
-    <div id="score-screen" class="score-screen hidden">
+    <div id="score-screen" class="score-screen screen-panel hidden">
       <h1>Quiz Complete</h1>
       <p class="score-message">Total score</p>
       <p id="score-value" class="score-value"></p>
@@ -1379,8 +1509,20 @@
     const QUESTION_COUNT = 7;
     const PRE_MATCH_COUNTDOWN_SEC = 3;
     const SOLO_ADVANCE_DELAY_MS = 2200;
-    const QUESTION_EXIT_MS = 260;
-    const QUESTION_TRANSITION_MS = 420;
+    const QUESTION_EXIT_MS = 300;
+    const QUESTION_TRANSITION_MS = 480;
+    const SCREEN_TRANSITION_MS = 320;
+    const ALL_SCREENS = [
+      'auth-screen',
+      'verify-screen',
+      'topic-screen',
+      'history-screen',
+      'waiting-screen',
+      'countdown-screen',
+      'quiz-screen',
+      'score-screen',
+      'match-score-screen'
+    ];
 
     let socket = null;
     let gameMode = 'solo';
@@ -1407,6 +1549,7 @@
     let pendingVerifyEmail = '';
     let emailVerificationEnabled = false;
     let soundEnabled = localStorage.getItem(SOUND_ENABLED_KEY) !== 'false';
+    let currentScreenId = 'auth-screen';
 
     function prefersReducedMotion() {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1534,12 +1677,15 @@
         document.getElementById('stat-avg-wrong-time').textContent =
           formatStatMs(stats.avgWrongTimeMs);
         document.getElementById('stat-questions').textContent = stats.totalQuestions;
+        animateStagger(document.querySelector('#history-screen .stats-grid'), '.stat-card');
 
         const matches = history.matches || [];
         emptyEl.classList.toggle('hidden', matches.length > 0);
 
-        matches.forEach((match) => {
+        matches.forEach((match, index) => {
           const row = document.createElement('tr');
+          row.className = 'screen-stagger';
+          row.style.animationDelay = `${index * 35}ms`;
 
           const resultClass =
             match.result === 'win'
@@ -1573,6 +1719,11 @@
       document.getElementById('register-form').classList.toggle('hidden', mode !== 'register');
       document.getElementById('auth-error').textContent = '';
       document.getElementById('auth-success').classList.add('hidden');
+
+      const activeForm = document.getElementById(mode === 'login' ? 'login-form' : 'register-form');
+      activeForm.classList.remove('form-swap');
+      void activeForm.offsetWidth;
+      activeForm.classList.add('form-swap');
     }
 
     function showVerifyScreen(email) {
@@ -1797,6 +1948,7 @@
 
     async function initApp() {
       updateSoundToggle();
+      document.getElementById('card').classList.add('card-enter');
       await loadAuthConfig();
       handleVerificationRedirect();
 
@@ -1925,10 +2077,12 @@
       }, QUESTION_EXIT_MS);
     }
 
-    function animateQuestionTransition(onMidpoint) {
+    function animateQuestionTransition(onMidpoint, { nextQuestionNumber = null } = {}) {
       const quizMain = document.getElementById('quiz-main');
       const overlay = document.getElementById('question-transition');
       const label = document.getElementById('question-transition-label');
+      const questionNumber =
+        nextQuestionNumber ?? Math.min(currentIndex + 2, totalQuestions);
 
       if (!quizMain || prefersReducedMotion()) {
         onMidpoint();
@@ -1942,7 +2096,7 @@
 
       setTimeout(() => {
         if (overlay && label) {
-          label.textContent = `Question ${currentIndex + 2} of ${totalQuestions}`;
+          label.textContent = `Question ${questionNumber} of ${totalQuestions}`;
           overlay.classList.remove('hidden');
           overlay.classList.add('visible');
         }
@@ -1961,9 +2115,123 @@
 
           setTimeout(() => {
             if (overlay) overlay.classList.add('hidden');
-          }, 220);
+          }, 260);
         }, QUESTION_TRANSITION_MS);
       }, QUESTION_EXIT_MS);
+    }
+
+    function animateStagger(container, selector, delayStep = 45) {
+      if (!container || prefersReducedMotion()) return;
+
+      container.querySelectorAll(selector).forEach((el, index) => {
+        el.classList.remove('screen-stagger');
+        void el.offsetWidth;
+        el.classList.add('screen-stagger');
+        el.style.animationDelay = `${index * delayStep}ms`;
+      });
+    }
+
+    function triggerFeedbackPop(el) {
+      if (!el || prefersReducedMotion()) return;
+      el.classList.remove('feedback-pop');
+      void el.offsetWidth;
+      el.classList.add('feedback-pop');
+    }
+
+    function animateCountUp(el, target, duration = 900) {
+      if (!el) return;
+
+      if (prefersReducedMotion()) {
+        el.textContent = target.toLocaleString();
+        return;
+      }
+
+      el.classList.add('counting');
+      const start = performance.now();
+
+      function frame(now) {
+        const progress = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(target * eased).toLocaleString();
+
+        if (progress < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          el.classList.remove('counting');
+        }
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    function runScreenEntrance(screenId) {
+      const screen = document.getElementById(screenId);
+      if (!screen) return;
+
+      const entranceMap = {
+        'topic-screen': ['.topic-row', '.user-bar:not(.hidden)', '.nickname-field:not(.hidden)'],
+        'history-screen': ['.stat-card', '#history-table-body tr'],
+        'score-screen': ['.score-value', '.score-label', '.btn-row'],
+        'match-score-screen': ['.match-result', '.match-scores > div', '.summary-chart-wrap', '.round-summary-table', '.btn-row'],
+        'auth-screen': ['.auth-tabs', '.auth-form:not(.hidden)', '#google-auth-wrap:not(.hidden)', '.guest-btn'],
+        'verify-screen': ['.verify-icon', '.verify-message', '.verify-actions'],
+        'waiting-screen': ['.waiting-spinner', '.waiting-topic', '.waiting-hint', '.cancel-btn']
+      };
+
+      (entranceMap[screenId] || []).forEach((selector) => {
+        animateStagger(screen, selector);
+      });
+    }
+
+    function showScreen(screenId, { instant = false } = {}) {
+      if (screenId === currentScreenId && !instant) {
+        return;
+      }
+
+      const card = document.getElementById('card');
+      const next = document.getElementById(screenId);
+      const prev = currentScreenId ? document.getElementById(currentScreenId) : null;
+
+      card.classList.toggle('quiz-layout', screenId === 'quiz-screen');
+      card.classList.toggle('summary-layout', screenId === 'match-score-screen');
+
+      const activateScreen = () => {
+        ALL_SCREENS.forEach((id) => {
+          const el = document.getElementById(id);
+          const isActive = id === screenId;
+          el.classList.toggle('hidden', !isActive);
+          el.classList.toggle('screen-visible', isActive);
+          el.classList.remove('screen-leaving', 'screen-entering');
+        });
+        currentScreenId = screenId;
+        runScreenEntrance(screenId);
+      };
+
+      if (instant || prefersReducedMotion() || !prev || prev === next) {
+        activateScreen();
+        return;
+      }
+
+      prev.classList.add('screen-leaving');
+      prev.classList.remove('screen-visible');
+
+      setTimeout(() => {
+        prev.classList.add('hidden');
+        prev.classList.remove('screen-leaving');
+
+        next.classList.remove('hidden');
+        next.classList.add('screen-entering');
+        next.classList.remove('screen-visible');
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            next.classList.remove('screen-entering');
+            next.classList.add('screen-visible');
+            currentScreenId = screenId;
+            runScreenEntrance(screenId);
+          });
+        });
+      }, SCREEN_TRANSITION_MS);
     }
 
     function showCountdown(count, topicName, vsName, { solo = false } = {}) {
@@ -2120,8 +2388,10 @@
       const body = document.getElementById('round-summary-body');
       body.innerHTML = '';
 
-      roundSummary.forEach((round) => {
+      roundSummary.forEach((round, index) => {
         const row = document.createElement('tr');
+        row.className = 'screen-stagger';
+        row.style.animationDelay = `${index * 35}ms`;
         row.innerHTML = `
           <td>Q${round.questionNumber}</td>
           <td class="question-cell">${round.questionText}</td>
@@ -2188,9 +2458,20 @@
           setMultiplayerUi(true);
           updateLiveScore(false);
           updateOpponentScore();
-          loadQuestion(data.startedAt);
-          animateQuestionEnter();
-          playQuestionStartSound();
+
+          const startRound = () => {
+            loadQuestion(data.startedAt);
+            animateQuestionEnter();
+            playQuestionStartSound();
+          };
+
+          if (data.questionIndex > 0) {
+            animateQuestionTransition(startRound, {
+              nextQuestionNumber: data.questionIndex + 1
+            });
+          } else {
+            startRound();
+          }
         });
 
         socket.on('opponent:answered', (data) => {
@@ -2203,6 +2484,7 @@
             document.getElementById('feedback').textContent =
               `${data.opponentNickname} scored +${data.points} pts!`;
             document.getElementById('feedback').className = 'feedback opponent-scored';
+            triggerFeedbackPop(document.getElementById('feedback'));
           } else if (answered) {
             document.getElementById('feedback').textContent = `${data.opponentNickname} answered — waiting for round...`;
             document.getElementById('feedback').className = 'feedback';
@@ -2393,14 +2675,6 @@
       }
     }
 
-    function showScreen(screenId) {
-      ['auth-screen', 'verify-screen', 'topic-screen', 'history-screen', 'waiting-screen', 'countdown-screen', 'quiz-screen', 'score-screen', 'match-score-screen'].forEach((id) => {
-        document.getElementById(id).classList.toggle('hidden', id !== screenId);
-      });
-      document.getElementById('card').classList.toggle('quiz-layout', screenId === 'quiz-screen');
-      document.getElementById('card').classList.toggle('summary-layout', screenId === 'match-score-screen');
-    }
-
     async function loadTopics() {
       const topicList = document.getElementById('topic-list');
       const errorEl = document.getElementById('topic-error');
@@ -2414,9 +2688,10 @@
         const topics = await response.json();
         topicList.innerHTML = '';
 
-        topics.forEach((topic) => {
+        topics.forEach((topic, index) => {
           const row = document.createElement('div');
-          row.className = 'topic-row';
+          row.className = 'topic-row screen-stagger';
+          row.style.animationDelay = `${index * 45}ms`;
 
           const name = document.createElement('p');
           name.className = 'topic-name';
@@ -2626,6 +2901,8 @@
           soloAdvanceTimeoutId = null;
           nextQuestion();
         }, SOLO_ADVANCE_DELAY_MS);
+
+        triggerFeedbackPop(feedback);
       } else {
         if (isCorrect) {
           playCorrectSound();
@@ -2645,13 +2922,22 @@
           opponentPickEl.textContent = getOpponentPickMessage(opponentAnswer, q.options, opponentName);
           opponentPickEl.classList.remove('hidden');
         }
+
+        triggerFeedbackPop(feedback);
       }
     }
 
     function setQuestionImage(imageUrl) {
       const imageEl = document.getElementById('question-image');
+      imageEl.classList.remove('question-image-visible');
 
       if (imageUrl) {
+        imageEl.onload = () => {
+          imageEl.classList.add('question-image-visible');
+        };
+        if (imageEl.src === imageUrl && imageEl.complete) {
+          imageEl.classList.add('question-image-visible');
+        }
         imageEl.src = imageUrl;
         imageEl.classList.remove('hidden');
       } else {
@@ -2665,7 +2951,11 @@
 
       if (text) {
         questionEl.textContent = text;
-        questionEl.classList.remove('hidden');
+        questionEl.classList.remove('hidden', 'question-reveal');
+        if (!prefersReducedMotion()) {
+          void questionEl.offsetWidth;
+          questionEl.classList.add('question-reveal');
+        }
       } else {
         questionEl.textContent = '';
         questionEl.classList.add('hidden');
@@ -2682,6 +2972,7 @@
       setQuestionText(q.text || '');
       document.getElementById('feedback').textContent = '';
       document.getElementById('feedback').className = 'feedback';
+      document.getElementById('feedback').classList.remove('feedback-pop');
       document.getElementById('opponent-pick-label').classList.add('hidden');
       document.getElementById('opponent-pick-label').textContent = '';
 
@@ -2757,11 +3048,18 @@
         resultEl.className = 'match-result lose';
       }
 
-      document.getElementById('match-your-score').textContent = data.yourScore.toLocaleString();
+      animateCountUp(document.getElementById('match-your-score'), data.yourScore);
       document.getElementById('match-opponent-label').textContent = opponentNickname;
-      document.getElementById('match-opponent-score').textContent = data.opponentScore.toLocaleString();
+      animateCountUp(document.getElementById('match-opponent-score'), data.opponentScore);
 
       const roundSummary = data.roundSummary || [];
+      const chartWrap = document.querySelector('.summary-chart-wrap');
+      if (chartWrap) {
+        chartWrap.classList.remove('chart-enter');
+        void chartWrap.offsetWidth;
+        chartWrap.classList.add('chart-enter');
+      }
+
       if (roundSummary.length > 0) {
         drawMatchChart(roundSummary, yourLabel, opponentNickname);
         renderRoundSummaryTable(roundSummary, yourLabel, opponentNickname);
@@ -2775,7 +3073,7 @@
       clearTimer();
       clearSoloAdvanceTimeout();
       showScreen('score-screen');
-      document.getElementById('score-value').textContent = totalScore.toLocaleString();
+      animateCountUp(document.getElementById('score-value'), totalScore);
       document.getElementById('score-label').textContent =
         `${correctCount} / ${questions.length} correct in ${selectedTopicName}`;
     }
