@@ -206,15 +206,17 @@
       color: #dc2626;
     }
 
-    .potential-points {
+    .round-bonus-label {
       font-size: 0.8125rem;
-      font-weight: 600;
-      color: #16a34a;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #764ba2;
       margin-bottom: 0.5rem;
     }
 
-    .potential-points.urgent {
-      color: #dc2626;
+    .round-bonus-label.hidden {
+      display: none;
     }
 
     .quiz-body {
@@ -1404,7 +1406,7 @@
         <div class="timer-track">
           <div id="timer-fill" class="timer-fill"></div>
         </div>
-        <p id="potential-points" class="potential-points">+1000 pts if correct now</p>
+        <p id="round-bonus-label" class="round-bonus-label hidden">Final round · 2× points</p>
       </div>
 
       <p id="match-meta" class="match-meta hidden"></p>
@@ -1416,7 +1418,7 @@
             <div id="score-fill" class="score-fill-vertical"></div>
           </div>
           <p id="live-score" class="live-score">0</p>
-          <p id="max-score-hint" class="max-score-hint">/ 7000</p>
+          <p id="max-score-hint" class="max-score-hint">/ 160</p>
         </aside>
 
         <div id="quiz-main" class="quiz-main question-visible">
@@ -1439,7 +1441,7 @@
             <div id="opponent-score-fill" class="score-fill-vertical score-fill-opponent"></div>
           </div>
           <p id="opponent-live-score" class="live-score">0</p>
-          <p id="opponent-max-score-hint" class="max-score-hint">/ 7000</p>
+          <p id="opponent-max-score-hint" class="max-score-hint">/ 160</p>
         </aside>
       </div>
     </div>
@@ -1504,8 +1506,9 @@
     const TOKEN_KEY = 'quizcream_token';
     const SOUND_ENABLED_KEY = 'quizcream_sound';
     const TIME_LIMIT_MS = 7000;
-    const MAX_POINTS = 1000;
-    const POINTS_PER_MS = MAX_POINTS / TIME_LIMIT_MS;
+    const BASE_MAX_POINTS = 20;
+    const BASE_MIN_POINTS = 10;
+    const MAX_TOTAL_POINTS = 160;
     const QUESTION_COUNT = 7;
     const PRE_MATCH_COUNTDOWN_SEC = 3;
     const SOLO_ADVANCE_DELAY_MS = 2200;
@@ -1550,6 +1553,12 @@
     let emailVerificationEnabled = false;
     let soundEnabled = localStorage.getItem(SOUND_ENABLED_KEY) !== 'false';
     let currentScreenId = 'auth-screen';
+    let bgMusic = {
+      masterGain: null,
+      layers: [],
+      pulseInterval: null,
+      intensity: 0
+    };
 
     function prefersReducedMotion() {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1982,9 +1991,174 @@
       soundEnabled = !soundEnabled;
       localStorage.setItem(SOUND_ENABLED_KEY, soundEnabled ? 'true' : 'false');
       updateSoundToggle();
+
       if (soundEnabled) {
         playTone(660, 0.08, 0.06);
+        if (currentScreenId === 'quiz-screen') {
+          startBackgroundMusic();
+          updateBackgroundMusicIntensity(currentIndex, totalQuestions);
+        }
+        return;
       }
+
+      stopBackgroundMusic();
+    }
+
+    function getQuestionCount() {
+      return gameMode === 'multiplayer' ? totalQuestions : questions.length;
+    }
+
+    function isLastRound(questionIndex, count = getQuestionCount()) {
+      return questionIndex === count - 1;
+    }
+
+    function getQuestionPointBounds(questionIndex, count = getQuestionCount()) {
+      const multiplier = isLastRound(questionIndex, count) ? 2 : 1;
+
+      return {
+        min: BASE_MIN_POINTS * multiplier,
+        max: BASE_MAX_POINTS * multiplier
+      };
+    }
+
+    function getMaxPossibleScore() {
+      const count = getQuestionCount() || QUESTION_COUNT;
+      let total = 0;
+
+      for (let i = 0; i < count; i += 1) {
+        total += getQuestionPointBounds(i, count).max;
+      }
+
+      return total || MAX_TOTAL_POINTS;
+    }
+
+    function getTimeLeftMs(elapsedMs) {
+      return Math.max(0, TIME_LIMIT_MS - elapsedMs);
+    }
+
+    function calculatePoints(timeLeftMs, questionIndex, count = getQuestionCount()) {
+      const { min, max } = getQuestionPointBounds(questionIndex, count);
+      const ratio = Math.max(0, Math.min(1, timeLeftMs / TIME_LIMIT_MS));
+
+      return Math.round(min + (max - min) * ratio);
+    }
+
+    function scoreAnswer(isCorrect, elapsedMs, questionIndex = currentIndex, count = getQuestionCount()) {
+      if (!isCorrect) return 0;
+      return calculatePoints(getTimeLeftMs(elapsedMs), questionIndex, count);
+    }
+
+    function getBackgroundPulseIntervalMs() {
+      const base = 620;
+      const min = 280;
+      return Math.round(base - (base - min) * bgMusic.intensity);
+    }
+
+    function pulseBackgroundBass() {
+      if (!soundEnabled || !bgMusic.masterGain) return;
+
+      const bass = bgMusic.layers.find((layer) => layer.type === 'bass');
+      if (!bass) return;
+
+      const ctx = ensureAudio();
+      const now = ctx.currentTime;
+      bass.gain.gain.cancelScheduledValues(now);
+      bass.gain.gain.setValueAtTime(0.08 + bgMusic.intensity * 0.1, now);
+      bass.gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    }
+
+    function restartBackgroundPulse() {
+      if (bgMusic.pulseInterval) {
+        clearInterval(bgMusic.pulseInterval);
+      }
+
+      bgMusic.pulseInterval = setInterval(pulseBackgroundBass, getBackgroundPulseIntervalMs());
+    }
+
+    function updateBackgroundMusicIntensity(questionIndex, count) {
+      bgMusic.intensity = count <= 1 ? 1 : questionIndex / (count - 1);
+
+      if (!bgMusic.masterGain) return;
+
+      const ctx = ensureAudio();
+      const now = ctx.currentTime;
+      const masterVolume = 0.028 + bgMusic.intensity * 0.05;
+      bgMusic.masterGain.gain.setTargetAtTime(masterVolume, now, 0.35);
+
+      bgMusic.layers
+        .filter((layer) => layer.type === 'pad')
+        .forEach((layer, index) => {
+          layer.gain.gain.setTargetAtTime(0.08 + bgMusic.intensity * 0.1 + index * 0.015, now, 0.35);
+        });
+
+      const bass = bgMusic.layers.find((layer) => layer.type === 'bass');
+      if (bass) {
+        bass.osc.frequency.setTargetAtTime(92 + bgMusic.intensity * 28, now, 0.35);
+      }
+
+      restartBackgroundPulse();
+    }
+
+    function startBackgroundMusic() {
+      if (!soundEnabled) return;
+
+      stopBackgroundMusic();
+      const ctx = ensureAudio();
+
+      bgMusic.masterGain = ctx.createGain();
+      bgMusic.masterGain.gain.value = 0.028;
+      bgMusic.masterGain.connect(ctx.destination);
+
+      [196, 247, 294, 370].forEach((frequency, index) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = index % 2 === 0 ? 'sine' : 'triangle';
+        osc.frequency.value = frequency;
+        gain.gain.value = 0.08 + index * 0.015;
+        osc.connect(gain);
+        gain.connect(bgMusic.masterGain);
+        osc.start();
+        bgMusic.layers.push({ osc, gain, type: 'pad' });
+      });
+
+      const bassOsc = ctx.createOscillator();
+      const bassGain = ctx.createGain();
+      bassOsc.type = 'sine';
+      bassOsc.frequency.value = 92;
+      bassGain.gain.value = 0.001;
+      bassOsc.connect(bassGain);
+      bassGain.connect(bgMusic.masterGain);
+      bassOsc.start();
+      bgMusic.layers.push({ osc: bassOsc, gain: bassGain, type: 'bass' });
+
+      restartBackgroundPulse();
+      updateBackgroundMusicIntensity(currentIndex, totalQuestions);
+    }
+
+    function stopBackgroundMusic() {
+      if (bgMusic.pulseInterval) {
+        clearInterval(bgMusic.pulseInterval);
+        bgMusic.pulseInterval = null;
+      }
+
+      bgMusic.layers.forEach(({ osc, gain }) => {
+        try {
+          osc.stop();
+          osc.disconnect();
+          gain.disconnect();
+        } catch (_error) {
+          // Oscillator may already be stopped.
+        }
+      });
+
+      bgMusic.layers = [];
+
+      if (bgMusic.masterGain) {
+        bgMusic.masterGain.disconnect();
+        bgMusic.masterGain = null;
+      }
+
+      bgMusic.intensity = 0;
     }
 
     function playTone(frequency, durationSec, volume = 0.08) {
@@ -2096,7 +2270,9 @@
 
       setTimeout(() => {
         if (overlay && label) {
-          label.textContent = `Question ${questionNumber} of ${totalQuestions}`;
+          label.textContent = isLastRound(questionNumber - 1, totalQuestions)
+            ? 'Final round · 2× points'
+            : `Question ${questionNumber} of ${totalQuestions}`;
           overlay.classList.remove('hidden');
           overlay.classList.add('visible');
         }
@@ -2321,7 +2497,7 @@
       const maxScore = Math.max(
         yourCumulative[yourCumulative.length - 1],
         opponentCumulative[opponentCumulative.length - 1],
-        MAX_POINTS
+        getMaxPossibleScore(roundSummary.length)
       );
 
       const xStep = plotW / Math.max(roundSummary.length, 1);
@@ -2463,6 +2639,11 @@
             loadQuestion(data.startedAt);
             animateQuestionEnter();
             playQuestionStartSound();
+            if (data.questionIndex === 0) {
+              startBackgroundMusic();
+            } else {
+              updateBackgroundMusicIntensity(currentIndex, totalQuestions);
+            }
           };
 
           if (data.questionIndex > 0) {
@@ -2514,6 +2695,7 @@
 
         socket.on('match:end', (data) => {
           clearTimer();
+          stopBackgroundMusic();
           showMatchScore(data);
           refreshUserRecord();
         });
@@ -2542,7 +2724,7 @@
     }
 
     function updateOpponentScore(animateBump = false) {
-      const maxPossible = getMaxPossibleScore() || QUESTION_COUNT * MAX_POINTS;
+      const maxPossible = getMaxPossibleScore();
       const percent = Math.min(100, (opponentScore / maxPossible) * 100);
       const fill = document.getElementById('opponent-score-fill');
 
@@ -2556,25 +2738,8 @@
       }
     }
 
-    function getTimeLeftMs(elapsedMs) {
-      return Math.max(0, TIME_LIMIT_MS - elapsedMs);
-    }
-
-    function calculatePoints(timeLeftMs) {
-      return Math.round(timeLeftMs * POINTS_PER_MS);
-    }
-
-    function scoreAnswer(isCorrect, elapsedMs) {
-      if (!isCorrect) return 0;
-      return calculatePoints(getTimeLeftMs(elapsedMs));
-    }
-
-    function getPotentialPoints(timeLeftMs) {
-      return calculatePoints(timeLeftMs);
-    }
-
     function updateLiveScore(animateBump = false) {
-      const maxPossible = getMaxPossibleScore() || QUESTION_COUNT * MAX_POINTS;
+      const maxPossible = getMaxPossibleScore();
       const percent = Math.min(100, (totalScore / maxPossible) * 100);
       const fill = document.getElementById('score-fill');
 
@@ -2588,20 +2753,8 @@
       }
     }
 
-    function getMaxPossibleScore() {
-      const count = gameMode === 'multiplayer' ? totalQuestions : questions.length;
-      return count * MAX_POINTS;
-    }
-
     function formatTimeDisplay(timeLeftMs) {
       return `${(timeLeftMs / 1000).toFixed(1)}s`;
-    }
-
-    function updatePotentialPoints(timeLeftMs) {
-      const potentialEl = document.getElementById('potential-points');
-      const points = getPotentialPoints(timeLeftMs);
-      potentialEl.textContent = `+${points} pts if correct now`;
-      potentialEl.classList.toggle('urgent', timeLeftMs <= 3000);
     }
 
     function clearTimer() {
@@ -2632,7 +2785,6 @@
       const isUrgent = timeLeftMs <= 3000;
       label.classList.toggle('urgent', isUrgent);
       document.getElementById('timer-fill').classList.toggle('urgent', isUrgent);
-      updatePotentialPoints(timeLeftMs);
     }
 
     function tickTimer() {
@@ -2749,6 +2901,7 @@
           showScreen('quiz-screen');
           document.getElementById('player-sidebar-title').textContent = getNickname();
           updateLiveScore(false);
+          startBackgroundMusic();
           loadQuestion();
           animateQuestionEnter();
           playQuestionStartSound();
@@ -2774,6 +2927,7 @@
 
     function cancelMatchmaking() {
       if (socket) socket.emit('queue:leave');
+      stopBackgroundMusic();
       showScreen('topic-screen');
     }
 
@@ -2850,15 +3004,12 @@
       } else {
         const elapsedMs = Date.now() - questionStartedAt;
         isCorrect = selectedIndex === q.correctIndex;
-        points = scoreAnswer(isCorrect, elapsedMs);
+        points = scoreAnswer(isCorrect, elapsedMs, currentIndex, getQuestionCount());
         correctIndex = q.correctIndex;
       }
 
       freezeTimerBar();
       clearTimer();
-      document.getElementById('potential-points').textContent = isCorrect
-        ? `+${points} pts earned`
-        : '+0 pts this question';
 
       buttons.forEach((btn, index) => {
         btn.disabled = true;
@@ -2964,10 +3115,16 @@
 
     function loadQuestion(serverStartedAt) {
       const q = gameMode === 'multiplayer' ? currentQuestion : questions[currentIndex];
+      const count = getQuestionCount();
       answered = false;
 
       document.getElementById('progress').textContent =
-        `${selectedTopicName} · Q${currentIndex + 1}/${totalQuestions}`;
+        `${selectedTopicName} · Q${currentIndex + 1}/${count}`;
+      document.getElementById('round-bonus-label').classList.toggle(
+        'hidden',
+        !isLastRound(currentIndex, count)
+      );
+      updateBackgroundMusicIntensity(currentIndex, count);
       setQuestionImage(q.imageUrl || null);
       setQuestionText(q.text || '');
       document.getElementById('feedback').textContent = '';
@@ -3072,6 +3229,7 @@
     function showScore() {
       clearTimer();
       clearSoloAdvanceTimeout();
+      stopBackgroundMusic();
       showScreen('score-screen');
       animateCountUp(document.getElementById('score-value'), totalScore);
       document.getElementById('score-label').textContent =
@@ -3082,6 +3240,7 @@
       clearTimer();
       clearCountdown();
       clearSoloAdvanceTimeout();
+      stopBackgroundMusic();
       if (socket) socket.emit('queue:leave');
 
       gameMode = 'solo';

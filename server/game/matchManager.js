@@ -163,7 +163,12 @@ export class MatchManager {
     const question = match.questions[match.currentRound];
     const elapsedMs = Date.now() - match.roundStartedAt;
     const isCorrect = selectedIndex === question.correctIndex;
-    const points = scoreAnswer({ isCorrect, timeMs: elapsedMs });
+    const points = scoreAnswer({
+      isCorrect,
+      timeMs: elapsedMs,
+      questionIndex: match.currentRound,
+      totalQuestions: match.questions.length
+    });
 
     player.answered = true;
     player.lastAnswer = {
