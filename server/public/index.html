@@ -1532,7 +1532,6 @@
       <p id="waiting-topic" class="waiting-topic"></p>
       <p id="waiting-player" class="waiting-player"></p>
       <p id="waiting-status" class="waiting-status">Searching for an opponent<span class="waiting-dots"></span></p>
-      <p class="waiting-hint">Another player must pick the same topic. Share the link or open a second tab to test.</p>
       <button class="cancel-btn" onclick="cancelMatchmaking()">Cancel</button>
     </div>
 
@@ -2703,7 +2702,7 @@
         'match-score-screen': ['.match-result', '.match-scores > div', '.summary-chart-wrap', '.round-summary-table', '.btn-row'],
         'auth-screen': ['.auth-tabs', '.auth-form:not(.hidden)', '#google-auth-wrap:not(.hidden)', '.guest-btn'],
         'verify-screen': ['.verify-icon', '.verify-message', '.verify-actions'],
-        'waiting-screen': ['.waiting-ring', '.waiting-title', '.waiting-topic', '.waiting-player', '.waiting-status', '.waiting-hint', '.cancel-btn']
+        'waiting-screen': ['.waiting-ring', '.waiting-title', '.waiting-topic', '.waiting-player', '.waiting-status', '.cancel-btn']
       };
 
       (entranceMap[screenId] || []).forEach((selector) => {
@@ -3213,7 +3212,7 @@
 
           const name = document.createElement('p');
           name.className = 'topic-name';
-          name.textContent = `${topic.name} (${topic._count.questions} questions)`;
+          name.textContent = topic.name;
 
           const actions = document.createElement('div');
           actions.className = 'topic-actions';
