@@ -499,4 +499,22 @@ router.get('/me', requireAuth, (req, res) => {
   res.json({ user: publicUser(req.user) });
 });
 
+router.delete('/account', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    await prisma.$transaction([
+      prisma.matchAnswer.deleteMany({ where: { userId } }),
+      prisma.match.updateMany({ where: { winnerId: userId }, data: { winnerId: null } }),
+      prisma.match.updateMany({ where: { player1Id: userId }, data: { player1Id: null } }),
+      prisma.match.updateMany({ where: { player2Id: userId }, data: { player2Id: null } }),
+      prisma.user.delete({ where: { id: userId } })
+    ]);
+
+    res.json({ message: 'Account deleted.' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 export default router;

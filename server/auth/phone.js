@@ -7,13 +7,48 @@ import {
   MAX_OTP_ATTEMPTS,
   verifyOtpCode
 } from './otp.js';
+import { isFast2SmsConfigured, sendFast2SmsOtp } from './sms/fast2sms.js';
+import { isTwilioConfigured, sendTwilioOtp } from './sms/twilio.js';
+
+function smsProvider() {
+  return String(process.env.SMS_PROVIDER || 'twilio').trim().toLowerCase();
+}
+
+function isIndianPhone(phone) {
+  const digits = phone.replace(/\D/g, '');
+  return digits.startsWith('91') && digits.length === 12;
+}
+
+function pickSmsSender(phone) {
+  const provider = smsProvider();
+
+  if (provider === 'fast2sms') {
+    return 'fast2sms';
+  }
+
+  if (provider === 'twilio') {
+    return 'twilio';
+  }
+
+  if (isIndianPhone(phone) && isFast2SmsConfigured()) {
+    return 'fast2sms';
+  }
+
+  return 'twilio';
+}
 
 export function isPhoneOtpEnabled() {
-  return Boolean(
-    process.env.TWILIO_ACCOUNT_SID &&
-      process.env.TWILIO_AUTH_TOKEN &&
-      process.env.TWILIO_PHONE_NUMBER
-  );
+  const provider = smsProvider();
+
+  if (provider === 'fast2sms') {
+    return isFast2SmsConfigured();
+  }
+
+  if (provider === 'twilio') {
+    return isTwilioConfigured();
+  }
+
+  return isTwilioConfigured() || isFast2SmsConfigured();
 }
 
 export function normalizePhone(raw) {
@@ -37,7 +72,13 @@ export function normalizePhone(raw) {
     throw new Error('Enter a valid phone number with country code.');
   }
 
-  return `+${digits}`;
+  const phone = `+${digits}`;
+
+  if (smsProvider() === 'fast2sms' && !isIndianPhone(phone)) {
+    throw new Error('Only Indian mobile numbers (+91) are supported with Fast2SMS.');
+  }
+
+  return phone;
 }
 
 export function syntheticEmailForPhone(phone) {
@@ -80,37 +121,17 @@ export function verifyPhoneOtp(user, code) {
 }
 
 export async function sendPhoneOtpSms({ phone, code }) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_PHONE_NUMBER;
+  const sender = pickSmsSender(phone);
 
-  if (!accountSid || !authToken || !from) {
-    throw new Error('Phone OTP is not configured.');
+  if (sender === 'fast2sms') {
+    return sendFast2SmsOtp({ phone, code });
   }
 
-  const body = `Your QUIZCREAM code is ${code}. It expires in 10 minutes.`;
-  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
-
-  const response = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        To: phone,
-        From: from,
-        Body: body
-      })
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to send SMS: ${errorText}`);
+  if (!isTwilioConfigured()) {
+    throw new Error('Global SMS is not configured yet.');
   }
+
+  return sendTwilioOtp({ phone, code });
 }
 
 export { canResendOtp, isOtpExpired, MAX_OTP_ATTEMPTS };

@@ -101,9 +101,12 @@ export function computeUserStats(answers, user) {
       ? 0
       : [...correctByMatch.values()].reduce((sum, count) => sum + count, 0) / totalMatches;
 
+  const decidedMatches = user.wins + user.losses;
+
   return {
     wins: user.wins,
     losses: user.losses,
+    winPercent: decidedMatches === 0 ? 0 : round((user.wins / decidedMatches) * 100, 1),
     totalMatches,
     totalQuestions: totalAnswers,
     totalCorrect,

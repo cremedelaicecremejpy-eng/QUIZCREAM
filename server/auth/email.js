@@ -62,9 +62,14 @@ export function isValidEmailFormat(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function appName() {
+  return process.env.APP_NAME || 'Quticks';
+}
+
 export async function sendVerificationEmail({ email, username, token, otpCode }) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM || 'QUIZCREAM <onboarding@resend.dev>';
+  const brand = appName();
+  const from = process.env.EMAIL_FROM || `${brand} <onboarding@resend.dev>`;
   const appUrl = (process.env.APP_URL || 'http://localhost:3001').replace(/\/$/, '');
 
   if (!apiKey) {
@@ -86,12 +91,12 @@ export async function sendVerificationEmail({ email, username, token, otpCode })
     body: JSON.stringify({
       from,
       to: [email],
-      subject: 'Verify your QUIZCREAM account',
+      subject: `Verify your ${brand} account`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; color: #111827;">
-          <h1 style="color: #667eea; margin-bottom: 0.5rem;">Quiz Cream</h1>
+          <h1 style="color: #667eea; margin-bottom: 0.5rem;">${brand}</h1>
           <p>Hi ${username},</p>
-          <p>Thanks for signing up. Verify your email using the code below or the button.</p>
+          <p>Thanks for signing up on ${brand}. Verify your email using the code below or the button.</p>
           ${otpBlock}
           <p style="margin: 2rem 0;">
             <a href="${verifyUrl}" style="background: #667eea; color: #ffffff; padding: 12px 20px; border-radius: 10px; text-decoration: none; font-weight: 600;">

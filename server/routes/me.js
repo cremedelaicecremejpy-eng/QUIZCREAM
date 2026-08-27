@@ -67,7 +67,7 @@ router.get('/matches', requireAuth, async (req, res) => {
       player2: { select: { username: true } },
       answers: {
         where: { userId },
-        select: { isCorrect: true }
+        select: { isCorrect: true, elapsedMs: true }
       }
     },
     orderBy: { createdAt: 'desc' },
@@ -79,6 +79,10 @@ router.get('/matches', requireAuth, async (req, res) => {
       const side = getUserMatchSide(match, userId);
       const correctCount = match.answers.filter((answer) => answer.isCorrect).length;
       const totalQuestions = match.answers.length;
+      const correctAnswers = match.answers.filter((answer) => answer.isCorrect);
+      const wrongAnswers = match.answers.filter((answer) => !answer.isCorrect);
+      const avg = (values) =>
+        values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
 
       return {
         id: match.id,
@@ -92,7 +96,10 @@ router.get('/matches', requireAuth, async (req, res) => {
         correctCount,
         totalQuestions,
         accuracyPercent:
-          totalQuestions === 0 ? 0 : Math.round((correctCount / totalQuestions) * 1000) / 10
+          totalQuestions === 0 ? 0 : Math.round((correctCount / totalQuestions) * 1000) / 10,
+        avgAnswerTimeMs: Math.round(avg(match.answers.map((answer) => answer.elapsedMs))),
+        avgCorrectTimeMs: Math.round(avg(correctAnswers.map((answer) => answer.elapsedMs))),
+        avgWrongTimeMs: Math.round(avg(wrongAnswers.map((answer) => answer.elapsedMs)))
       };
     })
   });

@@ -343,7 +343,7 @@
       .question-transition-label,
       .question-image,
       .summary-chart-wrap.chart-enter,
-      .waiting-spinner,
+      .waiting-ring,
       .card .question.question-reveal {
         transition: none !important;
         animation: none !important;
@@ -882,22 +882,75 @@
       font-weight: 700;
     }
 
-    .waiting-spinner {
-      font-size: 2.5rem;
-      margin: 1.5rem 0;
-      animation: pulse 1.2s ease-in-out infinite;
+    .waiting-screen {
+      text-align: center;
+      padding: 2rem 1rem 1.5rem;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 0.4; transform: scale(0.95); }
-      50% { opacity: 1; transform: scale(1); }
+    .waiting-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #667eea;
+      margin-bottom: 1rem;
+    }
+
+    .waiting-ring {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 1.25rem;
+      border-radius: 50%;
+      border: 4px solid #ececf4;
+      border-top-color: #667eea;
+      border-right-color: #764ba2;
+      animation: waiting-spin 0.9s linear infinite;
+    }
+
+    @keyframes waiting-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .waiting-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 0.75rem;
     }
 
     .waiting-topic {
-      font-size: 1.125rem;
+      display: inline-block;
+      font-size: 0.9375rem;
       font-weight: 700;
-      color: #1a1a2e;
+      color: #667eea;
+      background: #eef0ff;
+      padding: 0.375rem 0.875rem;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+
+    .waiting-player {
+      color: #374151;
+      font-weight: 600;
       margin-bottom: 0.5rem;
+    }
+
+    .waiting-status {
+      color: #6b7280;
+      margin-bottom: 1rem;
+      min-height: 1.5rem;
+    }
+
+    .waiting-dots::after {
+      content: '';
+      animation: waiting-dots 1.4s steps(4, end) infinite;
+    }
+
+    @keyframes waiting-dots {
+      0% { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
     }
 
     .waiting-hint {
@@ -1316,19 +1369,19 @@
 
       <form id="phone-login-form" class="auth-form hidden" onsubmit="handlePhoneSendOtp(event, 'login')">
         <label for="phone-login-number">Phone number</label>
-        <input id="phone-login-number" type="tel" autocomplete="tel" placeholder="+91 98765 43210" />
+        <input id="phone-login-number" type="tel" autocomplete="tel" placeholder="+91 98765 43210 or +1 555 123 4567" />
         <p class="auth-hint">Include country code. India numbers can start with 10 digits.</p>
         <button class="auth-submit" type="submit">Send login code</button>
       </form>
 
       <form id="phone-register-form" class="auth-form hidden" onsubmit="handlePhoneSendOtp(event, 'signup')">
         <label for="phone-register-number">Phone number</label>
-        <input id="phone-register-number" type="tel" autocomplete="tel" placeholder="+91 98765 43210" />
+        <input id="phone-register-number" type="tel" autocomplete="tel" placeholder="+91 98765 43210 or +1 555 123 4567" />
 
         <label for="phone-register-username">Username</label>
         <input id="phone-register-username" type="text" maxlength="20" autocomplete="username" placeholder="Pick a username" />
 
-        <p class="auth-hint">We will text you a 6-digit code to verify your phone.</p>
+        <p class="auth-hint">Include country code (+91, +1, +44…). We will text you a 6-digit code.</p>
         <button class="auth-submit" type="submit">Send signup code</button>
       </form>
 
@@ -1415,6 +1468,10 @@
       <p class="stats-section-title">Overall</p>
       <div class="stats-grid">
         <div class="stat-card">
+          <span class="stat-label">Win rate</span>
+          <span id="stat-win-rate" class="stat-value">0%</span>
+        </div>
+        <div class="stat-card">
           <span class="stat-label">Record</span>
           <span id="stat-record" class="stat-value">0W · 0L</span>
         </div>
@@ -1459,6 +1516,7 @@
               <th>Score</th>
               <th>Result</th>
               <th>Acc.</th>
+              <th>Avg time</th>
             </tr>
           </thead>
           <tbody id="history-table-body"></tbody>
@@ -1468,10 +1526,13 @@
     </div>
 
     <div id="waiting-screen" class="waiting-screen screen-panel hidden">
-      <h1>Finding Match</h1>
-      <div class="waiting-spinner">⚔️</div>
+      <p class="waiting-label">Matchmaking</p>
+      <div class="waiting-ring" aria-hidden="true"></div>
+      <h1 class="waiting-title">Finding a match</h1>
       <p id="waiting-topic" class="waiting-topic"></p>
-      <p class="waiting-hint">Open another browser tab (or ask a friend) and queue the same topic.</p>
+      <p id="waiting-player" class="waiting-player"></p>
+      <p id="waiting-status" class="waiting-status">Searching for an opponent<span class="waiting-dots"></span></p>
+      <p class="waiting-hint">Another player must pick the same topic. Share the link or open a second tab to test.</p>
       <button class="cancel-btn" onclick="cancelMatchmaking()">Cancel</button>
     </div>
 
@@ -1707,6 +1768,7 @@
       isGuest = false;
       resetSocket();
       updateTopicScreenAuth();
+      refreshUserRecord();
     }
 
     function clearSession() {
@@ -1730,14 +1792,39 @@
       });
     }
 
+    function applyStatsSummary(stats) {
+      if (!stats) return;
+
+      currentUser.wins = stats.wins;
+      currentUser.losses = stats.losses;
+      currentUser.statsSummary = {
+        winPercent: stats.winPercent,
+        accuracyPercent: stats.accuracyPercent,
+        avgAnswerTimeMs: stats.avgAnswerTimeMs,
+        avgCorrectTimeMs: stats.avgCorrectTimeMs,
+        avgWrongTimeMs: stats.avgWrongTimeMs
+      };
+
+      document.getElementById('stat-win-rate').textContent = `${stats.winPercent}%`;
+      document.getElementById('stat-record').textContent = `${stats.wins}W · ${stats.losses}L`;
+      document.getElementById('stat-matches').textContent = stats.totalMatches;
+      document.getElementById('stat-accuracy').textContent = `${stats.accuracyPercent}%`;
+      document.getElementById('stat-avg-correct').textContent = stats.avgCorrectPerMatch;
+      document.getElementById('stat-avg-time').textContent = formatStatMs(stats.avgAnswerTimeMs);
+      document.getElementById('stat-avg-correct-time').textContent =
+        formatStatMs(stats.avgCorrectTimeMs);
+      document.getElementById('stat-avg-wrong-time').textContent =
+        formatStatMs(stats.avgWrongTimeMs);
+      document.getElementById('stat-questions').textContent = stats.totalQuestions;
+      updateTopicScreenAuth();
+    }
+
     async function refreshUserRecord() {
       if (!currentUser) return;
 
       try {
         const stats = await authFetch('/api/me/stats');
-        currentUser.wins = stats.wins;
-        currentUser.losses = stats.losses;
-        updateTopicScreenAuth();
+        applyStatsSummary(stats);
       } catch (_error) {
         // Keep existing record if refresh fails.
       }
@@ -1765,20 +1852,7 @@
           authFetch('/api/me/matches')
         ]);
 
-        currentUser.wins = stats.wins;
-        currentUser.losses = stats.losses;
-        updateTopicScreenAuth();
-
-        document.getElementById('stat-record').textContent = `${stats.wins}W · ${stats.losses}L`;
-        document.getElementById('stat-matches').textContent = stats.totalMatches;
-        document.getElementById('stat-accuracy').textContent = `${stats.accuracyPercent}%`;
-        document.getElementById('stat-avg-correct').textContent = stats.avgCorrectPerMatch;
-        document.getElementById('stat-avg-time').textContent = formatStatMs(stats.avgAnswerTimeMs);
-        document.getElementById('stat-avg-correct-time').textContent =
-          formatStatMs(stats.avgCorrectTimeMs);
-        document.getElementById('stat-avg-wrong-time').textContent =
-          formatStatMs(stats.avgWrongTimeMs);
-        document.getElementById('stat-questions').textContent = stats.totalQuestions;
+        applyStatsSummary(stats);
         animateStagger(document.querySelector('#history-screen .stats-grid'), '.stat-card');
 
         const matches = history.matches || [];
@@ -1805,6 +1879,7 @@
             <td>${match.yourScore} - ${match.opponentScore}</td>
             <td class="${resultClass}">${resultLabel}</td>
             <td>${match.accuracyPercent}%</td>
+            <td>${formatStatMs(match.avgAnswerTimeMs)}</td>
           `;
           tableBody.appendChild(row);
         });
@@ -2031,8 +2106,13 @@
         guestNote.classList.add('hidden');
         nicknameField.classList.add('hidden');
         document.getElementById('user-bar-name').textContent = currentUser.username;
-        document.getElementById('user-bar-record').textContent =
-          `${currentUser.wins}W · ${currentUser.losses}L`;
+        if (currentUser.statsSummary) {
+          document.getElementById('user-bar-record').textContent =
+            `${currentUser.statsSummary.winPercent}% win · ${currentUser.statsSummary.accuracyPercent}% acc · ${formatStatMs(currentUser.statsSummary.avgAnswerTimeMs)} avg`;
+        } else {
+          document.getElementById('user-bar-record').textContent =
+            `${currentUser.wins}W · ${currentUser.losses}L`;
+        }
       } else if (isGuest) {
         userBar.classList.add('hidden');
         guestNote.classList.remove('hidden');
@@ -2623,7 +2703,7 @@
         'match-score-screen': ['.match-result', '.match-scores > div', '.summary-chart-wrap', '.round-summary-table', '.btn-row'],
         'auth-screen': ['.auth-tabs', '.auth-form:not(.hidden)', '#google-auth-wrap:not(.hidden)', '.guest-btn'],
         'verify-screen': ['.verify-icon', '.verify-message', '.verify-actions'],
-        'waiting-screen': ['.waiting-spinner', '.waiting-topic', '.waiting-hint', '.cancel-btn']
+        'waiting-screen': ['.waiting-ring', '.waiting-title', '.waiting-topic', '.waiting-player', '.waiting-status', '.waiting-hint', '.cancel-btn']
       };
 
       (entranceMap[screenId] || []).forEach((selector) => {
@@ -2861,7 +2941,10 @@
         socket = io(API_BASE, { auth: { token: getToken() || '' } });
 
         socket.on('queue:waiting', ({ topicName }) => {
-          document.getElementById('waiting-topic').textContent = `Topic: ${topicName}`;
+          document.getElementById('waiting-topic').textContent = topicName;
+          document.getElementById('waiting-player').textContent = `Playing as ${getNickname()}`;
+          document.getElementById('waiting-status').innerHTML =
+            'Waiting for another player<span class="waiting-dots"></span>';
           showScreen('waiting-screen');
         });
 
@@ -3194,6 +3277,14 @@
       }
     }
 
+    function showFindingMatchScreen(topicName) {
+      document.getElementById('waiting-topic').textContent = topicName;
+      document.getElementById('waiting-player').textContent = `Playing as ${getNickname()}`;
+      document.getElementById('waiting-status').innerHTML =
+        'Searching for an opponent<span class="waiting-dots"></span>';
+      showScreen('waiting-screen');
+    }
+
     function findMatch(topicId, topicName) {
       const errorEl = document.getElementById('topic-error');
       errorEl.textContent = '';
@@ -3201,6 +3292,7 @@
       selectedTopicName = topicName;
 
       ensureAudio();
+      showFindingMatchScreen(topicName);
       ensureSocket().emit('queue:join', {
         topicId,
         topicName,
