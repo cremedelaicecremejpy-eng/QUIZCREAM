@@ -22,7 +22,7 @@
       justify-content: center;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 1.5rem;
+      padding: 1rem 1.5rem;
     }
 
     :root {
@@ -138,6 +138,23 @@
     .card.summary-layout {
       max-width: 680px;
       padding: 1.5rem;
+    }
+
+    .card.topic-layout {
+      max-width: 640px;
+      width: min(100%, 640px);
+      max-height: min(92vh, 880px);
+      padding: 1.75rem 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card.history-layout {
+      max-width: 720px;
+      width: min(100%, 720px);
+      max-height: min(92vh, 900px);
+      padding: 1.5rem 1.75rem;
+      overflow-y: auto;
     }
 
     .card h1 {
@@ -662,10 +679,83 @@
       display: none;
     }
 
+    .topic-screen:not(.hidden) {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      text-align: left;
+    }
+
+    .topic-screen h1,
+    .topic-screen > .subtitle {
+      text-align: center;
+    }
+
+    .topic-screen > .subtitle {
+      margin-bottom: 1rem;
+    }
+
+    .topic-search-wrap {
+      position: relative;
+      margin-bottom: 1rem;
+    }
+
+    .topic-search-icon {
+      position: absolute;
+      left: 0.875rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1.125rem;
+      height: 1.125rem;
+      color: #9ca3af;
+      pointer-events: none;
+    }
+
+    #topic-search {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.75rem;
+      font-size: 1rem;
+      border: 2px solid #ececf4;
+      border-radius: 10px;
+      outline: none;
+      background: #ffffff;
+    }
+
+    #topic-search:focus {
+      border-color: #667eea;
+    }
+
     .topic-list {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
+      flex: 1;
+      min-height: 220px;
+      max-height: min(52vh, 480px);
+      overflow-y: auto;
+      padding-right: 0.25rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .topic-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .topic-list::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 999px;
+    }
+
+    .topic-search-empty {
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.9375rem;
+      padding: 0.5rem 0 0.25rem;
+    }
+
+    .topic-search-empty.hidden {
+      display: none;
     }
 
     .topic-btn {
@@ -1452,7 +1542,21 @@
 
       <p id="guest-note" class="guest-note hidden">Playing as guest — wins won't be saved to an account.</p>
       <input id="nickname" class="nickname-field" type="text" maxlength="20" placeholder="Your nickname" />
+      <div class="topic-search-wrap">
+        <svg class="topic-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle>
+          <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+        <input
+          id="topic-search"
+          type="search"
+          placeholder="Search topics..."
+          autocomplete="off"
+          oninput="filterTopics(this.value)"
+        />
+      </div>
       <div id="topic-list" class="topic-list"></div>
+      <p id="topic-search-empty" class="topic-search-empty hidden">No topics match your search.</p>
       <p id="topic-error" class="error-msg"></p>
     </div>
 
@@ -1677,6 +1781,7 @@
 
     let socket = null;
     let gameMode = 'solo';
+    let allTopics = [];
     let questions = [];
     let currentQuestion = null;
     let selectedTopicName = '';
@@ -2696,7 +2801,7 @@
       if (!screen) return;
 
       const entranceMap = {
-        'topic-screen': ['.topic-row', '.user-bar:not(.hidden)', '.nickname-field:not(.hidden)'],
+        'topic-screen': ['.topic-search-wrap', '.topic-row', '.user-bar:not(.hidden)', '.nickname-field:not(.hidden)'],
         'history-screen': ['.stat-card', '#history-table-body tr'],
         'score-screen': ['.score-value', '.score-label', '.btn-row'],
         'match-score-screen': ['.match-result', '.match-scores > div', '.summary-chart-wrap', '.round-summary-table', '.btn-row'],
@@ -2721,6 +2826,8 @@
 
       card.classList.toggle('quiz-layout', screenId === 'quiz-screen');
       card.classList.toggle('summary-layout', screenId === 'match-score-screen');
+      card.classList.toggle('topic-layout', screenId === 'topic-screen');
+      card.classList.toggle('history-layout', screenId === 'history-screen');
 
       const activateScreen = () => {
         ALL_SCREENS.forEach((id) => {
@@ -3192,49 +3299,69 @@
       }
     }
 
+    function filterTopics(query) {
+      renderTopicList(query);
+    }
+
+    function renderTopicList(filterText = '') {
+      const topicList = document.getElementById('topic-list');
+      const emptyEl = document.getElementById('topic-search-empty');
+      const query = String(filterText || '').trim().toLowerCase();
+      const filtered = query
+        ? allTopics.filter((topic) => topic.name.toLowerCase().includes(query))
+        : allTopics;
+
+      topicList.innerHTML = '';
+      emptyEl.classList.toggle('hidden', filtered.length > 0);
+
+      filtered.forEach((topic, index) => {
+        const row = document.createElement('div');
+        row.className = 'topic-row screen-stagger';
+        row.style.animationDelay = `${index * 45}ms`;
+
+        const name = document.createElement('p');
+        name.className = 'topic-name';
+        name.textContent = topic.name;
+
+        const actions = document.createElement('div');
+        actions.className = 'topic-actions';
+
+        const soloBtn = document.createElement('button');
+        soloBtn.className = 'topic-btn';
+        soloBtn.textContent = 'Solo Play';
+        soloBtn.onclick = () => startQuiz(topic.id, topic.name);
+
+        const battleBtn = document.createElement('button');
+        battleBtn.className = 'topic-btn battle';
+        battleBtn.textContent = 'Find Match';
+        battleBtn.onclick = () => findMatch(topic.id, topic.name);
+
+        actions.appendChild(soloBtn);
+        actions.appendChild(battleBtn);
+        row.appendChild(name);
+        row.appendChild(actions);
+        topicList.appendChild(row);
+      });
+    }
+
     async function loadTopics() {
       const topicList = document.getElementById('topic-list');
       const errorEl = document.getElementById('topic-error');
+      const searchInput = document.getElementById('topic-search');
       topicList.innerHTML = '<button class="topic-btn" disabled>Loading topics...</button>';
       errorEl.textContent = '';
+      if (searchInput) searchInput.value = '';
 
       try {
         const response = await fetch(`${API_BASE}/api/topics`);
         if (!response.ok) throw new Error('Could not load topics');
 
-        const topics = await response.json();
-        topicList.innerHTML = '';
-
-        topics.forEach((topic, index) => {
-          const row = document.createElement('div');
-          row.className = 'topic-row screen-stagger';
-          row.style.animationDelay = `${index * 45}ms`;
-
-          const name = document.createElement('p');
-          name.className = 'topic-name';
-          name.textContent = topic.name;
-
-          const actions = document.createElement('div');
-          actions.className = 'topic-actions';
-
-          const soloBtn = document.createElement('button');
-          soloBtn.className = 'topic-btn';
-          soloBtn.textContent = 'Solo Play';
-          soloBtn.onclick = () => startQuiz(topic.id, topic.name);
-
-          const battleBtn = document.createElement('button');
-          battleBtn.className = 'topic-btn battle';
-          battleBtn.textContent = 'Find Match';
-          battleBtn.onclick = () => findMatch(topic.id, topic.name);
-
-          actions.appendChild(soloBtn);
-          actions.appendChild(battleBtn);
-          row.appendChild(name);
-          row.appendChild(actions);
-          topicList.appendChild(row);
-        });
+        allTopics = await response.json();
+        renderTopicList();
       } catch (error) {
+        allTopics = [];
         topicList.innerHTML = '';
+        document.getElementById('topic-search-empty').classList.add('hidden');
         errorEl.textContent =
           'Could not connect to server. Run "npm.cmd run dev" in the server folder, then refresh.';
       }
