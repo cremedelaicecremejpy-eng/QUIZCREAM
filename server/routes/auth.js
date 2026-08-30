@@ -204,8 +204,8 @@ router.post('/phone/send-otp', async (req, res) => {
     const username = sanitizeUsername(req.body.username);
 
     if (mode === 'signup') {
-      if (username.length < 3) {
-        return res.status(400).json({ message: 'Username must be at least 3 characters.' });
+      if (username.length < 2) {
+        return res.status(400).json({ message: 'Username must be at least 2 characters.' });
       }
 
       const existingPhone = await prisma.user.findUnique({ where: { phone } });
@@ -337,8 +337,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Enter a valid email address.' });
     }
 
-    if (username.length < 3) {
-      return res.status(400).json({ message: 'Username must be at least 3 characters.' });
+    if (username.length < 2) {
+      return res.status(400).json({ message: 'Username must be at least 2 characters.' });
     }
 
     validatePassword(password);

@@ -127,6 +127,11 @@ io.on('connection', (socket) => {
     matchManager.submitAnswer(socket.id, selectedIndex);
   });
 
+  socket.on('match:leave', () => {
+    leaveQueue(socket.id);
+    matchManager.handleDisconnect(socket.id);
+  });
+
   socket.on('disconnect', () => {
     leaveQueue(socket.id);
     matchManager.handleDisconnect(socket.id);

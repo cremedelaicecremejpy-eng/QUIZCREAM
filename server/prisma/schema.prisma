@@ -12,6 +12,7 @@ model Topic {
   name      String     @unique
   questions Question[]
   matches   Match[]
+  soloGames SoloGame[]
 }
 
 model Question {
@@ -61,6 +62,7 @@ model User {
   matchesAsPlayer2 Match[]        @relation("Player2")
   winsAsWinner     Match[]        @relation("Winner")
   matchAnswers     MatchAnswer[]
+  soloGames        SoloGame[]
 }
 
 model Match {
@@ -82,6 +84,22 @@ model Match {
   player2 User?         @relation("Player2", fields: [player2Id], references: [id])
   winner  User?         @relation("Winner", fields: [winnerId], references: [id])
   answers MatchAnswer[]
+}
+
+model SoloGame {
+  id             String   @id @default(cuid())
+  userId         String
+  topicId        String
+  score          Int
+  correctCount   Int
+  totalQuestions Int
+  createdAt      DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model MatchAnswer {
