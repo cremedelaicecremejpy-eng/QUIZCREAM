@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="mask-icon" href="/favicon.svg" color="#2E3A4B">
-  <title>Trivia Question</title>
+  <title>Quticks</title>
   <style>
     *,
     *::before,
@@ -18,6 +18,7 @@
     body {
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -1360,46 +1361,105 @@
     .result-draw { color: #6b7280; font-weight: 700; }
 
     .home-header {
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
     }
 
-    .home-user-line {
-      font-size: 0.8125rem;
-      color: #6b7280;
-      margin-top: 0.35rem;
+    .home-view {
+      text-align: left;
     }
 
-    .home-user-line strong {
-      color: #667eea;
+    .home-view.hidden {
+      display: none;
     }
 
-    .home-tabs {
+    .home-view-head {
       display: flex;
-      gap: 0.5rem;
+      align-items: center;
+      gap: 0.75rem;
       margin-bottom: 1.25rem;
     }
 
-    .home-tab {
-      flex: 1;
-      padding: 0.625rem 0.75rem;
-      font-size: 0.875rem;
+    .home-view-title {
+      margin: 0;
+      font-size: 1.125rem;
+    }
+
+    .home-back-btn {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8125rem;
       font-weight: 600;
-      border: 2px solid #ececf4;
-      border-radius: 10px;
-      background: #f8f8fc;
-      color: #6b7280;
-      cursor: pointer;
-      transition: background 0.2s, border-color 0.2s, color 0.2s;
-    }
-
-    .home-tab.active {
-      border-color: #667eea;
-      background: #ffffff;
       color: #667eea;
+      background: #ffffff;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s, transform 0.15s;
     }
 
-    .home-panel {
+    .home-back-btn:hover {
+      background: #f0f1fe;
+      transform: translateX(-2px);
+    }
+
+    .home-menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .home-menu-btn {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      padding: 1.1rem 1.25rem;
+      border: 2px solid #ececf4;
+      border-radius: 12px;
+      background: #f8f8fc;
+      cursor: pointer;
       text-align: left;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+
+    .home-menu-btn:hover {
+      background: #ffffff;
+      border-color: #667eea;
+      transform: translateY(-1px);
+    }
+
+    .home-menu-icon {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .home-menu-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .home-menu-text strong {
+      font-size: 1rem;
+      color: #1a1a2e;
+    }
+
+    .home-menu-text span {
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+
+    .home-user-line {
+      margin-top: 1rem;
+      font-size: 0.8125rem;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+    }
+
+    .home-user-line strong {
+      color: #ffffff;
+      font-weight: 700;
     }
 
     .stats-subtabs {
@@ -1626,7 +1686,7 @@
 <body>
   <div id="card" class="card">
     <div id="auth-screen" class="auth-screen screen-panel screen-visible">
-      <h1>Quiz Cream</h1>
+      <h1>Quticks</h1>
       <p class="subtitle">Sign in to save wins and match history — or play as a guest.</p>
 
       <div class="auth-method-tabs">
@@ -1731,19 +1791,33 @@
     </div>
 
     <div id="topic-screen" class="topic-screen screen-panel hidden">
-      <div class="home-header">
-        <h1>Quiz Cream</h1>
-        <p id="home-user-line" class="home-user-line hidden"></p>
+      <div id="home-menu" class="home-view">
+        <div class="home-header">
+          <h1>Quticks</h1>
+          <p class="subtitle">Solo practice or 1v1 battle — 7 questions, 7 seconds each.</p>
+        </div>
+
+        <div class="home-menu-list">
+          <button class="home-menu-btn" type="button" onclick="showHomeView('play')">
+            <span class="home-menu-icon">🎮</span>
+            <span class="home-menu-text"><strong>Play</strong><span>Solo &amp; 1v1 games</span></span>
+          </button>
+          <button class="home-menu-btn" type="button" onclick="showHomeView('stats')">
+            <span class="home-menu-icon">📊</span>
+            <span class="home-menu-text"><strong>Stats</strong><span>Records, history &amp; daily streak</span></span>
+          </button>
+          <button class="home-menu-btn" type="button" onclick="showHomeView('settings')">
+            <span class="home-menu-icon">⚙️</span>
+            <span class="home-menu-text"><strong>Settings</strong><span>Profile &amp; preferences</span></span>
+          </button>
+        </div>
       </div>
 
-      <div class="home-tabs" role="tablist">
-        <button id="home-tab-play" class="home-tab active" type="button" onclick="showHomeTab('play')">Play</button>
-        <button id="home-tab-stats" class="home-tab" type="button" onclick="showHomeTab('stats')">Stats</button>
-        <button id="home-tab-settings" class="home-tab" type="button" onclick="showHomeTab('settings')">Settings</button>
-      </div>
-
-      <div id="home-panel-play" class="home-panel">
-        <p class="subtitle">Solo practice or 1v1 battle — 7 questions, 7 seconds each.</p>
+      <div id="home-view-play" class="home-view hidden">
+        <div class="home-view-head">
+          <button class="home-back-btn" type="button" onclick="showHomeView('menu')">← Back</button>
+          <h1 class="home-view-title">Play</h1>
+        </div>
         <p id="guest-note" class="guest-note hidden">Playing as guest — wins won't be saved to an account.</p>
         <input id="nickname" class="nickname-field" type="text" maxlength="20" placeholder="Your nickname" />
         <div class="topic-search-wrap">
@@ -1764,7 +1838,12 @@
         <p id="topic-error" class="error-msg"></p>
       </div>
 
-      <div id="home-panel-stats" class="home-panel hidden">
+      <div id="home-view-stats" class="home-view hidden">
+        <div class="home-view-head">
+          <button class="home-back-btn" type="button" onclick="showHomeView('menu')">← Back</button>
+          <h1 class="home-view-title">Stats</h1>
+        </div>
+
         <p id="stats-signed-out" class="guest-note hidden">
           Sign in to track your stats, match history, and daily streak.
         </p>
@@ -1853,7 +1932,12 @@
         </div>
       </div>
 
-      <div id="home-panel-settings" class="home-panel hidden">
+      <div id="home-view-settings" class="home-view hidden">
+        <div class="home-view-head">
+          <button class="home-back-btn" type="button" onclick="showHomeView('menu')">← Back</button>
+          <h1 class="home-view-title">Settings</h1>
+        </div>
+
         <p id="settings-signed-out" class="guest-note hidden">
           Sign in to change your profile and preferences.
         </p>
@@ -1997,6 +2081,8 @@
       </div>
     </div>
   </div>
+
+  <p id="home-user-line" class="home-user-line hidden"></p>
 
   <div id="confirm-modal" class="modal-overlay hidden" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
@@ -2194,27 +2280,35 @@
       }
     }
 
-    let currentHomeTab = 'play';
+    let currentHomeView = 'menu';
     let currentStatsSub = 'overview';
     let statsPanelLoaded = false;
 
-    function showHomeTab(tab) {
-      currentHomeTab = tab;
+    function showHomeView(view) {
+      currentHomeView = view;
 
-      ['play', 'stats', 'settings'].forEach((name) => {
-        document.getElementById(`home-tab-${name}`).classList.toggle('active', name === tab);
-        document.getElementById(`home-panel-${name}`).classList.toggle('hidden', name !== tab);
+      const views = {
+        menu: 'home-menu',
+        play: 'home-view-play',
+        stats: 'home-view-stats',
+        settings: 'home-view-settings'
+      };
+
+      Object.entries(views).forEach(([name, id]) => {
+        document.getElementById(id).classList.toggle('hidden', name !== view);
       });
 
-      if (tab === 'stats') {
-        if (currentUser) {
-          loadStatsPanel();
-        }
-      } else if (tab === 'settings') {
-        if (currentUser) {
-          document.getElementById('settings-username').value = currentUser.username;
-          document.getElementById('settings-username-status').textContent = '';
-        }
+      if (view === 'menu') {
+        animateStagger(document.getElementById('home-menu'), '.home-menu-btn');
+        return;
+      }
+
+      if (view === 'stats' && currentUser) {
+        loadStatsPanel();
+      } else if (view === 'settings' && currentUser) {
+        document.getElementById('settings-username').value = currentUser.username;
+        document.getElementById('settings-username-status').textContent = '';
+        document.getElementById('settings-username-status').className = 'settings-status';
       }
     }
 
@@ -2568,12 +2662,7 @@
       nicknameField.classList.toggle('hidden', signedIn);
 
       if (signedIn) {
-        const summary = currentUser.statsSummary;
-        const record = summary
-          ? `${summary.winPercent}% win · ${summary.accuracyPercent}% acc`
-          : `${currentUser.wins}W · ${currentUser.losses}L`;
-        userLine.innerHTML =
-          `Signed in as <strong>${currentUser.username}</strong> · ${record}`;
+        userLine.innerHTML = `Signed in as <strong>${currentUser.username}</strong>`;
       }
 
       document.getElementById('stats-signed-in').classList.toggle('hidden', !signedIn);
@@ -3156,7 +3245,7 @@
       if (!screen) return;
 
       const entranceMap = {
-        'topic-screen': ['.home-tab', '.topic-search-wrap', '.topic-row', '.nickname-field:not(.hidden)'],
+        'topic-screen': ['.home-menu-btn', '.topic-row'],
         'score-screen': ['.score-value', '.score-label', '.btn-row'],
         'match-score-screen': ['.match-result', '.match-scores > div', '.summary-chart-wrap', '.round-summary-table', '.btn-row'],
         'auth-screen': ['.auth-tabs', '.auth-form:not(.hidden)', '#google-auth-wrap:not(.hidden)', '.guest-btn'],
@@ -3191,6 +3280,7 @@
           el.classList.remove('screen-leaving', 'screen-entering');
         });
         currentScreenId = screenId;
+        if (screenId === 'topic-screen') showHomeView('menu');
         runScreenEntrance(screenId);
       };
 
@@ -3716,7 +3806,6 @@
     }
 
     async function loadTopics() {
-      showHomeTab('play');
       const topicList = document.getElementById('topic-list');
       const errorEl = document.getElementById('topic-error');
       const searchInput = document.getElementById('topic-search');
@@ -3802,7 +3891,6 @@
       if (socket) socket.emit('queue:leave');
       stopBackgroundMusic();
       showScreen('topic-screen');
-      showHomeTab('play');
     }
 
     let pendingConfirmAction = null;
