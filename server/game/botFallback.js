@@ -12,15 +12,32 @@ import { rememberBotSocket, forgetBotSocket } from './botRegistry.js';
 
 // Read at call time, not at import time: this module is imported before
 // dotenv.config() runs, so anything read up here would miss .env entirely.
+// A typo in a Railway variable should not quietly change how the game plays:
+// anything that is not a sensible number falls back to the default and says so.
+function num(name, fallback, low, high) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    console.warn(`[bot] ${name}="${raw}" is not a number, using ${fallback}`);
+    return fallback;
+  }
+
+  return Math.min(high, Math.max(low, value));
+}
+
+const OFF = new Set(['false', '0', 'no', 'off']);
+
 function settings() {
   return {
-    enabled: String(process.env.BOT_MATCH_ENABLED || 'true') !== 'false',
-    waitMs: Number(process.env.BOT_MATCH_DELAY_MS || 15000),
+    enabled: !OFF.has(String(process.env.BOT_MATCH_ENABLED || 'true').trim().toLowerCase()),
+    waitMs: num('BOT_MATCH_DELAY_MS', 15000, 2000, 120000),
     selfUrl: process.env.BOT_SELF_URL || `http://127.0.0.1:${process.env.PORT || 3001}`,
-    maxAtOnce: Number(process.env.BOT_MAX_CONCURRENT || 25),
+    maxAtOnce: num('BOT_MAX_CONCURRENT', 25, 0, 500),
     // Turn these from Railway when stand-ins feel too strong or too quick.
-    accuracyOffset: Number(process.env.BOT_ACCURACY_OFFSET || 0),
-    speedScale: Number(process.env.BOT_SPEED_SCALE || 1)
+    accuracyOffset: num('BOT_ACCURACY_OFFSET', 0, -0.5, 0.5),
+    speedScale: num('BOT_SPEED_SCALE', 1, 0.3, 3)
   };
 }
 
@@ -43,6 +60,8 @@ const NEUTRAL_ACCURACY = 0.62;
 // Guests have no history, so what happens in front of us counts for more.
 const GUEST_MATCH_WEIGHT = 0.75;
 const MEMBER_MATCH_WEIGHT = 0.6;
+// How many stand-ins one waiting player gets before we stop trying.
+const MAX_ATTEMPTS = 3;
 
 let clientFactory = null;
 let activeBots = 0;
@@ -132,29 +151,47 @@ async function overallAccuracy(userId) {
 }
 
 // How everyone does in this topic, so a guest's first question is not met by a
-// rival pulled out of thin air. Stand-in matches are left out on purpose: the
-// average must not drift towards whatever the stand-ins themselves scored.
+// rival pulled out of thin air. Only people are in here to begin with: answers
+// are stored for signed-in players only, and a stand-in never has an account,
+// so nothing it does can pull this average around.
+const POPULATION_CACHE_MAX = 50;
 const populationCache = new Map();
+const populationInFlight = new Map();
 
 async function topicPopulationAccuracy(topicId) {
   const cached = populationCache.get(topicId);
   if (cached && Date.now() - cached.at < POPULATION_TTL_MS) return cached.value;
 
-  try {
-    const answers = await prisma.matchAnswer.findMany({
-      where: { match: { topicId, vsBot: false } },
-      select: { isCorrect: true },
-      orderBy: { id: 'desc' },
-      take: POPULATION_SAMPLE
-    });
+  // One query per topic even when several stand-ins start at once.
+  if (populationInFlight.has(topicId)) return populationInFlight.get(topicId);
 
-    const value = answers.length >= 50 ? ratio(answers) : null;
-    populationCache.set(topicId, { at: Date.now(), value });
-    return value;
-  } catch (error) {
-    console.error('[bot] could not read the topic average:', error.message);
-    return null;
-  }
+  const query = (async () => {
+    try {
+      const answers = await prisma.matchAnswer.findMany({
+        where: { match: { topicId } },
+        select: { isCorrect: true },
+        orderBy: { id: 'desc' },
+        take: POPULATION_SAMPLE
+      });
+
+      const value = answers.length >= 50 ? ratio(answers) : null;
+
+      // Topic ids arrive from the client, so the cache cannot grow forever.
+      if (populationCache.size >= POPULATION_CACHE_MAX) {
+        populationCache.delete(populationCache.keys().next().value);
+      }
+      populationCache.set(topicId, { at: Date.now(), value });
+      return value;
+    } catch (error) {
+      console.error('[bot] could not read the topic average:', error.message);
+      return null;
+    } finally {
+      populationInFlight.delete(topicId);
+    }
+  })();
+
+  populationInFlight.set(topicId, query);
+  return query;
 }
 
 // Where the stand-in starts. Their record in this topic leads; with only a few
@@ -199,8 +236,18 @@ async function runBotMatch({ topicId, topicName, opponentNickname, opponentUserI
     return null;
   }
 
-  const connect = await getClientFactory();
-  const seed = await seedAccuracy(opponentUserId, topicId);
+  activeBots += 1;
+
+  let connect;
+  let seed;
+  try {
+    connect = await getClientFactory();
+    seed = await seedAccuracy(opponentUserId, topicId);
+  } catch (error) {
+    activeBots -= 1;
+    throw error;
+  }
+
   const bot = createBotPlayer({
     avoidNickname: opponentNickname,
     playerAccuracy: seed === null ? NEUTRAL_ACCURACY : seed
@@ -212,8 +259,6 @@ async function runBotMatch({ topicId, topicName, opponentNickname, opponentUserI
     reconnection: false,
     timeout: 5000
   });
-
-  activeBots += 1;
 
   let answerTimer = null;
   let pairingTimer = null;
@@ -339,6 +384,7 @@ export function attachBotFallback(io, matchManager) {
     let waitTimer = null;
     let retryTimer = null;
     let lastJoin = null;
+    let attempts = 0;
 
     const cancel = () => {
       clearTimeout(waitTimer);
@@ -355,10 +401,10 @@ export function attachBotFallback(io, matchManager) {
       waitTimer = setTimeout(async () => {
         waitTimer = null;
 
-        // A person turned up in the meantime, or the player left.
-        if (!stillWaiting() || !lastJoin) return;
-
         try {
+          // A person turned up in the meantime, or the player left.
+          if (!stillWaiting() || !lastJoin) return;
+
           await runBotMatch(lastJoin);
         } catch (error) {
           console.error('[bot] stand-in failed to start:', error.message);
@@ -366,9 +412,16 @@ export function attachBotFallback(io, matchManager) {
 
         // The stand-in can be taken by whoever is at the head of the queue, so
         // check that this player actually got a match, and send another one if
-        // they did not.
+        // they did not. A few tries, then leave them be.
+        attempts += 1;
+        if (attempts >= MAX_ATTEMPTS) return;
+
         retryTimer = setTimeout(() => {
-          if (stillWaiting() && lastJoin) scheduleStandIn(RETRY_WAIT_MS);
+          try {
+            if (stillWaiting() && lastJoin) scheduleStandIn(RETRY_WAIT_MS);
+          } catch (error) {
+            console.error('[bot] retry check failed:', error.message);
+          }
         }, RETRY_CHECK_MS);
       }, delayMs);
     };
@@ -379,6 +432,7 @@ export function attachBotFallback(io, matchManager) {
       const { enabled, waitMs } = settings();
       if (!enabled || !topicId) return;
 
+      attempts = 0;
       lastJoin = {
         topicId,
         topicName: String(topicName || 'Topic'),
