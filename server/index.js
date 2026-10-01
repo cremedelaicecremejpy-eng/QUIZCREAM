@@ -13,6 +13,7 @@ import authRouter from './routes/auth.js';
 import meRouter from './routes/me.js';
 import usersRouter from './routes/users.js';
 import { getUserFromToken } from './middleware/auth.js';
+import { attachBotFallback } from './game/botFallback.js';
 
 dotenv.config();
 
@@ -27,6 +28,10 @@ const io = new Server(server, {
 });
 
 const matchManager = new MatchManager(io);
+
+// A quiet queue gets a stand-in rival rather than an endless wait.
+attachBotFallback(io, matchManager);
+
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
@@ -34,6 +39,7 @@ app.use(express.json());
 app.use(express.static(publicDir));
 
 app.use('/api/auth', authRouter);
+
 app.use('/api/me', meRouter);
 app.use('/api/users', usersRouter);
 
