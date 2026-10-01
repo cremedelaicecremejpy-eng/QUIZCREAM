@@ -8,6 +8,7 @@
 
 import prisma from '../lib/prisma.js';
 import { createBotPlayer, decideBotAnswer, BOT_SOCKET_TAG } from './botPlayer.js';
+import { rememberBotSocket, forgetBotSocket } from './botRegistry.js';
 
 // Read at call time, not at import time: this module is imported before
 // dotenv.config() runs, so anything read up here would miss .env entirely.
@@ -16,7 +17,10 @@ function settings() {
     enabled: String(process.env.BOT_MATCH_ENABLED || 'true') !== 'false',
     waitMs: Number(process.env.BOT_MATCH_DELAY_MS || 15000),
     selfUrl: process.env.BOT_SELF_URL || `http://127.0.0.1:${process.env.PORT || 3001}`,
-    maxAtOnce: Number(process.env.BOT_MAX_CONCURRENT || 25)
+    maxAtOnce: Number(process.env.BOT_MAX_CONCURRENT || 25),
+    // Turn these from Railway when stand-ins feel too strong or too quick.
+    accuracyOffset: Number(process.env.BOT_ACCURACY_OFFSET || 0),
+    speedScale: Number(process.env.BOT_SPEED_SCALE || 1)
   };
 }
 
@@ -29,6 +33,16 @@ const RETRY_WAIT_MS = 5000;
 const MATCH_MAX_MS = 5 * 60 * 1000;
 const TIME_LIMIT_MS = 7000;
 const ANSWER_SAFETY_MS = 700;
+// How many of a player's own answers in a topic it takes before that topic
+// outweighs their overall record. At 20 a handful of rounds barely moves it.
+const TOPIC_PRIOR = 20;
+const TOPIC_SAMPLE = 100;
+const POPULATION_SAMPLE = 500;
+const POPULATION_TTL_MS = 10 * 60 * 1000;
+const NEUTRAL_ACCURACY = 0.62;
+// Guests have no history, so what happens in front of us counts for more.
+const GUEST_MATCH_WEIGHT = 0.75;
+const MEMBER_MATCH_WEIGHT = 0.6;
 
 let clientFactory = null;
 let activeBots = 0;
@@ -75,25 +89,102 @@ async function resolveCorrectIndex(topicId, question) {
   }
 }
 
-// How well the waiting player does, so the stand-in can start at their level
-// instead of guessing. Ordered by id, which runs roughly in time order for the
-// ids this app uses. Guests have no history, and that is fine: the match
-// itself tells the stand-in soon enough.
-async function playerAccuracy(userId) {
-  if (!userId) return null;
+const ratio = (rows) => (rows.length ? rows.filter((row) => row.isCorrect).length / rows.length : null);
+
+// What this player gets right in this topic, from their 1v1 answers.
+async function topicAccuracy(userId, topicId) {
+  const answers = await prisma.matchAnswer.findMany({
+    where: { userId, match: { topicId } },
+    select: { isCorrect: true },
+    orderBy: { id: 'desc' },
+    take: TOPIC_SAMPLE
+  });
+
+  return { value: ratio(answers), count: answers.length };
+}
+
+// Solo rounds count too, and new players have those before anything else.
+async function soloAccuracy(userId, topicId) {
+  const games = await prisma.soloGame.findMany({
+    where: { userId, topicId },
+    select: { correctCount: true, totalQuestions: true },
+    orderBy: { createdAt: 'desc' },
+    take: 10
+  });
+
+  const asked = games.reduce((sum, game) => sum + (game.totalQuestions || 0), 0);
+  if (!asked) return { value: null, count: 0 };
+
+  const right = games.reduce((sum, game) => sum + (game.correctCount || 0), 0);
+  return { value: right / asked, count: asked };
+}
+
+// Their record everywhere, as the thing a thin topic record leans on.
+async function overallAccuracy(userId) {
+  const answers = await prisma.matchAnswer.findMany({
+    where: { userId },
+    select: { isCorrect: true },
+    orderBy: { id: 'desc' },
+    take: 200
+  });
+
+  return { value: ratio(answers), count: answers.length };
+}
+
+// How everyone does in this topic, so a guest's first question is not met by a
+// rival pulled out of thin air. Stand-in matches are left out on purpose: the
+// average must not drift towards whatever the stand-ins themselves scored.
+const populationCache = new Map();
+
+async function topicPopulationAccuracy(topicId) {
+  const cached = populationCache.get(topicId);
+  if (cached && Date.now() - cached.at < POPULATION_TTL_MS) return cached.value;
 
   try {
     const answers = await prisma.matchAnswer.findMany({
-      where: { userId },
+      where: { match: { topicId, vsBot: false } },
       select: { isCorrect: true },
       orderBy: { id: 'desc' },
-      take: 200
+      take: POPULATION_SAMPLE
     });
 
-    if (answers.length < 7) return null;
+    const value = answers.length >= 50 ? ratio(answers) : null;
+    populationCache.set(topicId, { at: Date.now(), value });
+    return value;
+  } catch (error) {
+    console.error('[bot] could not read the topic average:', error.message);
+    return null;
+  }
+}
 
-    const correct = answers.filter((answer) => answer.isCorrect).length;
-    return correct / answers.length;
+// Where the stand-in starts. Their record in this topic leads; with only a few
+// answers it leans on their overall record, and with none on the topic itself.
+export async function seedAccuracy(userId, topicId) {
+  if (!userId) {
+    const population = await topicPopulationAccuracy(topicId);
+    return population === null ? null : population;
+  }
+
+  try {
+    const [topic, overall] = await Promise.all([
+      topicAccuracy(userId, topicId),
+      overallAccuracy(userId)
+    ]);
+
+    let here = topic;
+    if (here.count < 7) {
+      const solo = await soloAccuracy(userId, topicId);
+      if (solo.count > here.count) here = solo;
+    }
+
+    const fallback =
+      overall.count >= 7 ? overall.value : await topicPopulationAccuracy(topicId);
+
+    if (here.value === null) return fallback;
+    if (fallback === null) return here.value;
+
+    // Weighted by how much of the player we have actually seen in this topic.
+    return (here.count * here.value + TOPIC_PRIOR * fallback) / (here.count + TOPIC_PRIOR);
   } catch (error) {
     console.error('[bot] could not read player history:', error.message);
     return null;
@@ -101,7 +192,7 @@ async function playerAccuracy(userId) {
 }
 
 async function runBotMatch({ topicId, topicName, opponentNickname, opponentUserId }) {
-  const { selfUrl, maxAtOnce } = settings();
+  const { selfUrl, maxAtOnce, accuracyOffset, speedScale } = settings();
 
   if (activeBots >= maxAtOnce) {
     console.warn(`[bot] ${activeBots} stand-ins already playing, skipping this one`);
@@ -109,9 +200,10 @@ async function runBotMatch({ topicId, topicName, opponentNickname, opponentUserI
   }
 
   const connect = await getClientFactory();
+  const seed = await seedAccuracy(opponentUserId, topicId);
   const bot = createBotPlayer({
     avoidNickname: opponentNickname,
-    playerAccuracy: await playerAccuracy(opponentUserId)
+    playerAccuracy: seed === null ? NEUTRAL_ACCURACY : seed
   });
 
   const client = connect(selfUrl, {
@@ -195,6 +287,9 @@ async function runBotMatch({ topicId, topicName, opponentNickname, opponentUserI
       scoreGap,
       isLastRound: round === (totalQuestions || 7) - 1,
       opponentAccuracy: roundsSeen > 0 ? opponentCorrect / roundsSeen : null,
+      opponentWeight: opponentUserId ? MEMBER_MATCH_WEIGHT : GUEST_MATCH_WEIGHT,
+      accuracyOffset,
+      speedScale,
       timeLimitMs: TIME_LIMIT_MS
     });
 
@@ -236,6 +331,8 @@ export function attachBotFallback(io, matchManager) {
   io.on('connection', (socket) => {
     // Our own stand-ins connect here too; they never need one of their own.
     if (socket.handshake && socket.handshake.auth && socket.handshake.auth[BOT_SOCKET_TAG]) {
+      rememberBotSocket(socket.id);
+      socket.on('disconnect', () => forgetBotSocket(socket.id));
       return;
     }
 
