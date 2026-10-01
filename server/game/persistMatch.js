@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js';
+import { isBotSocket } from './botRegistry.js';
 
 function getPlayerEntries(match) {
   return Object.values(match.players);
@@ -29,7 +30,10 @@ export async function persistMatchResult(match, { winnerSocketId, isDraw, forfei
         player2Score: playerTwo.score,
         winnerId,
         isDraw,
-        forfeit
+        forfeit,
+        // A match played against a stand-in rival, so these results can be left
+        // out of anything that is meant to measure real players.
+        vsBot: entries.some((entry) => isBotSocket(entry.socketId))
       }
     });
 

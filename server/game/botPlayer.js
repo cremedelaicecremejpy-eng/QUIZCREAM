@@ -57,7 +57,7 @@ export function createBotPlayer({ avoidNickname = '', playerAccuracy = null } = 
 
   // Play at the player's level when we know it, otherwise pick a temperament.
   const accuracy =
-    typeof playerAccuracy === 'number' && playerAccuracy > 0
+    typeof playerAccuracy === 'number' && Number.isFinite(playerAccuracy) && playerAccuracy >= 0
       ? clamp(playerAccuracy + rand(-0.06, 0.06), 0.35, 0.85)
       : rand(0.52, 0.78);
 
@@ -78,18 +78,24 @@ export function decideBotAnswer({
   scoreGap = 0,
   isLastRound = false,
   opponentAccuracy = null,
+  opponentWeight = 0.6,
+  accuracyOffset = 0,
+  speedScale = 1,
   timeLimitMs = 7000
 }) {
   // Follow the player's level as the match shows what it is.
+  const weight = clamp(opponentWeight, 0, 1);
   const base =
     typeof opponentAccuracy === 'number'
-      ? 0.6 * opponentAccuracy + 0.4 * bot.accuracy
+      ? weight * opponentAccuracy + (1 - weight) * bot.accuracy
       : bot.accuracy;
 
   // Rubber band: the further ahead the bot gets, the more it lets slip, and the
   // other way round. Skill still decides the match; this only keeps it close.
   const band = clamp(scoreGap / 110, -0.26, 0.26);
-  let accuracy = base - band;
+  // accuracyOffset is the dial you turn when stand-ins feel too strong or too
+  // soft across the board. Negative makes them easier.
+  let accuracy = base - band + accuracyOffset;
 
   if (isLastRound && scoreGap < 0) accuracy += 0.05;
 
@@ -109,7 +115,7 @@ export function decideBotAnswer({
     selectedIndex = wrong.length ? pick(wrong) : 0;
   }
 
-  let thinkMs = rand(2100, 5200) * bot.pace;
+  let thinkMs = rand(2100, 5200) * bot.pace * (speedScale > 0 ? speedScale : 1);
   if (!answersCorrectly) thinkMs += rand(150, 900);
   thinkMs += clamp(scoreGap * 9, -700, 950);
   if (isLastRound) thinkMs -= 200;
@@ -121,3 +127,4 @@ export function decideBotAnswer({
 }
 
 export const __testing = { buildNickname, clamp };
+
