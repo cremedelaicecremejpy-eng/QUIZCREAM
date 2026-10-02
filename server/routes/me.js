@@ -2,6 +2,7 @@ import express from 'express';
 import prisma from '../lib/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { computeUserStats } from '../game/persistMatch.js';
+import { progressForXp } from '../game/levels.js';
 import { userPublicSelect, publicUser } from '../auth/userFields.js';
 
 const router = express.Router();
@@ -261,6 +262,35 @@ router.patch('/username', requireAuth, async (req, res) => {
   });
 
   res.json({ user: publicUser(updated) });
+});
+
+// Experience per topic, plus the overall level shown on the home badge.
+// Every topic is listed, including ones never played, so the client can render
+// the full set without stitching two lists together.
+router.get('/progress', requireAuth, async (req, res) => {
+  const [topics, rows, user] = await Promise.all([
+    prisma.topic.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    prisma.topicProgress.findMany({
+      where: { userId: req.user.id },
+      select: { topicId: true, xp: true, matches: true }
+    }),
+    prisma.user.findUnique({ where: { id: req.user.id }, select: { totalXp: true } })
+  ]);
+
+  const byTopic = new Map(rows.map((row) => [row.topicId, row]));
+
+  res.json({
+    overall: progressForXp(user?.totalXp || 0),
+    topics: topics.map((topic) => {
+      const row = byTopic.get(topic.id);
+      return {
+        topicId: topic.id,
+        name: topic.name,
+        matches: row?.matches || 0,
+        ...progressForXp(row?.xp || 0)
+      };
+    })
+  });
 });
 
 export default router;

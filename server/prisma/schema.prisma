@@ -13,6 +13,7 @@ model Topic {
   questions Question[]
   matches   Match[]
   soloGames SoloGame[]
+  progress  TopicProgress[]
 }
 
 model Question {
@@ -30,6 +31,7 @@ model Question {
   optionDImageUrl String?
   correctOption   String
   topic           Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  answers         MatchAnswer[]
 
   @@index([topicId])
 }
@@ -55,6 +57,7 @@ model User {
   emailOtpAttempts           Int       @default(0)
   wins                       Int       @default(0)
   losses                     Int       @default(0)
+  totalXp                    Int       @default(0)
   isPro                      Boolean   @default(false)
   createdAt                  DateTime  @default(now())
 
@@ -63,6 +66,7 @@ model User {
   winsAsWinner     Match[]        @relation("Winner")
   matchAnswers     MatchAnswer[]
   soloGames        SoloGame[]
+  topicProgress    TopicProgress[]
 }
 
 model Match {
@@ -107,15 +111,34 @@ model MatchAnswer {
   id            String  @id @default(cuid())
   matchId       String
   userId        String
+  questionId    String?
   questionIndex Int
   elapsedMs     Int
   isCorrect     Boolean
   points        Int
   selectedIndex Int?
 
-  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match    Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
 
   @@index([matchId])
   @@index([userId])
+  @@index([questionId])
+}
+
+// Experience in one topic, for one player. Fed by 1v1 matches only.
+model TopicProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  topicId   String
+  xp        Int      @default(0)
+  matches   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@index([topicId, xp])
 }
