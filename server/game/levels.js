@@ -17,7 +17,9 @@ function num(name, fallback, low, high) {
     return fallback;
   }
 
-  return Math.min(high, Math.max(low, value));
+  // Rounded: a fractional step would make xpTotalFor and xpToAdvance disagree
+  // by a point, which shows up as a progress bar stuck just short of full.
+  return Math.round(Math.min(high, Math.max(low, value)));
 }
 
 // The one pacing dial. Larger means a slower climb for everyone.
