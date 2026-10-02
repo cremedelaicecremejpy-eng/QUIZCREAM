@@ -260,6 +260,12 @@ export class MatchManager {
   }
 
   async endMatch(match, options = {}) {
+    // Saving takes a database round trip, and both sockets stay registered to
+    // this match until it finishes. Without this guard, someone closing their
+    // tab mid-save reaches handleDisconnect and the match is written twice.
+    if (match.ended) return;
+    match.ended = true;
+
     const { forfeit = false } = options;
     const playerEntries = Object.values(match.players);
     const [playerOne, playerTwo] = playerEntries;
@@ -308,6 +314,22 @@ export class MatchManager {
   handleDisconnect(socketId) {
     const match = this.getMatchForSocket(socketId);
     if (!match) return;
+
+    // Already saved, or being saved right now. Just tidy up.
+    if (match.ended) {
+      this.cleanupMatch(match);
+      return;
+    }
+
+    // Every question has been answered and the result is settled; this is a
+    // finished match whose loser closed the tab during the results pause, not
+    // a forfeit. Treating it as one would cost the winner their bonus.
+    if (match.currentRound >= match.questions.length) {
+      this.endMatch(match, { forfeit: false });
+      return;
+    }
+
+    match.ended = true;
 
     const opponentEntry = Object.values(match.players).find((player) => player.socketId !== socketId);
     if (opponentEntry) {
