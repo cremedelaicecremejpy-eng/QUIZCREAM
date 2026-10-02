@@ -270,12 +270,15 @@ export class MatchManager {
 
     const isDraw = winner === 'draw';
 
+    let progress = {};
+
     try {
-      await persistMatchResult(match, {
+      const saved = await persistMatchResult(match, {
         winnerSocketId: isDraw ? 'draw' : winner,
         isDraw,
         forfeit
       });
+      progress = saved?.progress || {};
     } catch (error) {
       console.error('Failed to persist match result:', error.message);
     }
@@ -293,7 +296,9 @@ export class MatchManager {
         opponentScore: opponent.score,
         opponentNickname: opponent.nickname,
         topicName: match.topicName,
-        roundSummary: this.buildRoundSummary(match, socketId)
+        roundSummary: this.buildRoundSummary(match, socketId),
+        // null for guests, who earn no experience.
+        progress: progress[socketId] || null
       });
     });
 
