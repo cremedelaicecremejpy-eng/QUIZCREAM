@@ -8,6 +8,7 @@
 
 import prisma from '../lib/prisma.js';
 import { createBotPlayer, decideBotAnswer, BOT_SOCKET_TAG } from './botPlayer.js';
+import { levelForXp, MAX_LEVEL } from './levels.js';
 import { rememberBotSocket, forgetBotSocket } from './botRegistry.js';
 
 // Read at call time, not at import time: this module is imported before
@@ -37,7 +38,13 @@ function settings() {
     maxAtOnce: num('BOT_MAX_CONCURRENT', 25, 0, 500),
     // Turn these from Railway when stand-ins feel too strong or too quick.
     accuracyOffset: num('BOT_ACCURACY_OFFSET', 0, -0.5, 0.5),
-    speedScale: num('BOT_SPEED_SCALE', 1, 0.3, 3)
+    speedScale: num('BOT_SPEED_SCALE', 1, 0.3, 3),
+    // How much of a head start the stand-in gives away, by the player's level
+    // in this topic. Negative means it plays below them. The gap closes as
+    // they climb, so the game gets harder without the rival ever running away
+    // from someone who simply plays a lot.
+    handicapAtL1: num('BOT_HANDICAP_L1', -0.13, -0.5, 0.5),
+    handicapAtMax: num('BOT_HANDICAP_L100', 0.058, -0.5, 0.5)
   };
 }
 
@@ -228,8 +235,33 @@ export async function seedAccuracy(userId, topicId) {
   }
 }
 
+// Straight line from the level-1 handicap to the level-100 one.
+export function handicapForLevel(level, atL1, atMax) {
+  const capped = Math.min(MAX_LEVEL, Math.max(1, Number.isFinite(level) ? level : 1));
+  const span = MAX_LEVEL - 1;
+  return atL1 + ((atMax - atL1) * (capped - 1)) / span;
+}
+
+// The player's level in this topic. Guests, and anyone who has never played it,
+// count as level 1 and get the full head start.
+export async function levelInTopic(userId, topicId) {
+  if (!userId) return 1;
+
+  try {
+    const row = await prisma.topicProgress.findUnique({
+      where: { userId_topicId: { userId, topicId } },
+      select: { xp: true }
+    });
+    return levelForXp(row?.xp ?? 0);
+  } catch (error) {
+    console.error('[bot] could not read player level:', error.message);
+    return 1;
+  }
+}
+
 async function runBotMatch({ topicId, topicName, opponentNickname, opponentUserId }) {
-  const { selfUrl, maxAtOnce, accuracyOffset, speedScale } = settings();
+  const { selfUrl, maxAtOnce, accuracyOffset, speedScale, handicapAtL1, handicapAtMax } =
+    settings();
 
   if (activeBots >= maxAtOnce) {
     console.warn(`[bot] ${activeBots} stand-ins already playing, skipping this one`);
@@ -240,9 +272,13 @@ async function runBotMatch({ topicId, topicName, opponentNickname, opponentUserI
 
   let connect;
   let seed;
+  let playerLevel = 1;
   try {
     connect = await getClientFactory();
-    seed = await seedAccuracy(opponentUserId, topicId);
+    [seed, playerLevel] = await Promise.all([
+      seedAccuracy(opponentUserId, topicId),
+      levelInTopic(opponentUserId, topicId)
+    ]);
   } catch (error) {
     activeBots -= 1;
     throw error;
@@ -333,7 +369,7 @@ async function runBotMatch({ topicId, topicName, opponentNickname, opponentUserI
       isLastRound: round === (totalQuestions || 7) - 1,
       opponentAccuracy: roundsSeen > 0 ? opponentCorrect / roundsSeen : null,
       opponentWeight: opponentUserId ? MEMBER_MATCH_WEIGHT : GUEST_MATCH_WEIGHT,
-      accuracyOffset,
+      accuracyOffset: accuracyOffset + handicapForLevel(playerLevel, handicapAtL1, handicapAtMax),
       speedScale,
       timeLimitMs: TIME_LIMIT_MS
     });
