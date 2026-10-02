@@ -19,115 +19,121 @@ export async function persistMatchResult(match, { winnerSocketId, isDraw, forfei
     winnerId = match.players[winnerSocketId]?.userId || null;
   }
 
-  return prisma.$transaction(async (tx) => {
-    const dbMatch = await tx.match.create({
-      data: {
-        topicId: match.topicId,
-        player1Id: playerOne.userId,
-        player2Id: playerTwo.userId,
-        guestName1: playerOne.userId ? null : playerOne.nickname,
-        guestName2: playerTwo.userId ? null : playerTwo.nickname,
-        player1Score: playerOne.score,
-        player2Score: playerTwo.score,
-        winnerId,
-        isDraw,
-        forfeit,
-        // A match played against a stand-in rival, so these results can be left
-        // out of anything that is meant to measure real players.
-        vsBot: entries.some((entry) => isBotSocket(entry.socketId))
-      }
-    });
-
-    const answerRows = [];
-
-    match.roundHistory.forEach((round, questionIndex) => {
-      for (const [socketId, result] of Object.entries(round.results)) {
-        const player = match.players[socketId];
-        if (!player?.userId) continue;
-
-        answerRows.push({
-          matchId: dbMatch.id,
-          userId: player.userId,
-          // Which question this was, so difficulty can later be measured from
-          // how often people actually get it right.
-          questionId: match.questions?.[questionIndex]?.id ?? null,
-          questionIndex,
-          elapsedMs: result.elapsedMs,
-          isCorrect: result.isCorrect,
-          points: result.points,
-          selectedIndex: result.selectedIndex
-        });
-      }
-    });
-
-    if (answerRows.length > 0) {
-      await tx.matchAnswer.createMany({ data: answerRows });
-    }
-
-    if (!isDraw && winnerSocketId && winnerSocketId !== 'draw') {
-      const winner = match.players[winnerSocketId];
-      const loser = entries.find((entry) => entry.socketId !== winnerSocketId);
-
-      if (winner?.userId) {
-        await tx.user.update({
-          where: { id: winner.userId },
-          data: { wins: { increment: 1 } }
-        });
-      }
-
-      if (loser?.userId) {
-        await tx.user.update({
-          where: { id: loser.userId },
-          data: { losses: { increment: 1 } }
-        });
-      }
-    }
-
-    // Experience, for signed-in players only. Guests have nothing to save it
-    // to, and solo practice never reaches this function at all.
-    const progress = {};
-
-    for (const entry of entries) {
-      if (!entry.userId) continue;
-
-      // A forfeit pays for the questions actually answered, but no win bonus:
-      // nobody should be able to farm wins by having a rival walk out.
-      const won = !isDraw && !forfeit && entry.socketId === winnerSocketId;
-      const gained = xpForMatch({ score: entry.score, won });
-
-      const where = { userId_topicId: { userId: entry.userId, topicId: match.topicId } };
-      const existing = await tx.topicProgress.findUnique({ where, select: { xp: true } });
-      const before = existing?.xp ?? 0;
-      const after = before + gained;
-
-      await tx.topicProgress.upsert({
-        where,
-        create: {
-          userId: entry.userId,
+  return prisma.$transaction(
+    async (tx) => {
+      const dbMatch = await tx.match.create({
+        data: {
           topicId: match.topicId,
-          xp: after,
-          level: levelForXp(after),
-          matches: 1
-        },
-        update: { xp: after, level: levelForXp(after), matches: { increment: 1 } }
+          player1Id: playerOne.userId,
+          player2Id: playerTwo.userId,
+          guestName1: playerOne.userId ? null : playerOne.nickname,
+          guestName2: playerTwo.userId ? null : playerTwo.nickname,
+          player1Score: playerOne.score,
+          player2Score: playerTwo.score,
+          winnerId,
+          isDraw,
+          forfeit,
+          // A match played against a stand-in rival, so these results can be left
+          // out of anything that is meant to measure real players.
+          vsBot: entries.some((entry) => isBotSocket(entry.socketId))
+        }
       });
 
-      const user = await tx.user.update({
-        where: { id: entry.userId },
-        data: { totalXp: { increment: gained } },
-        select: { totalXp: true }
+      const answerRows = [];
+
+      match.roundHistory.forEach((round, questionIndex) => {
+        for (const [socketId, result] of Object.entries(round.results)) {
+          const player = match.players[socketId];
+          if (!player?.userId) continue;
+
+          answerRows.push({
+            matchId: dbMatch.id,
+            userId: player.userId,
+            // Which question this was, so difficulty can later be measured from
+            // how often people actually get it right.
+            questionId: match.questions?.[questionIndex]?.id ?? null,
+            questionIndex,
+            elapsedMs: result.elapsedMs,
+            isCorrect: result.isCorrect,
+            points: result.points,
+            selectedIndex: result.selectedIndex
+          });
+        }
       });
 
-      progress[entry.socketId] = {
-        gained,
-        topic: progressForXp(after),
-        overall: progressForXp(user.totalXp),
-        leveledUp: levelForXp(after) > levelForXp(before)
-      };
-    }
+      if (answerRows.length > 0) {
+        await tx.matchAnswer.createMany({ data: answerRows });
+      }
 
-    return { matchId: dbMatch.id, progress };
-  });
+      if (!isDraw && winnerSocketId && winnerSocketId !== 'draw') {
+        const winner = match.players[winnerSocketId];
+        const loser = entries.find((entry) => entry.socketId !== winnerSocketId);
+
+        if (winner?.userId) {
+          await tx.user.update({
+            where: { id: winner.userId },
+            data: { wins: { increment: 1 } }
+          });
+        }
+
+        if (loser?.userId) {
+          await tx.user.update({
+            where: { id: loser.userId },
+            data: { losses: { increment: 1 } }
+          });
+        }
+      }
+
+      // Experience, for signed-in players only. Guests have nothing to save it
+      // to, and solo practice never reaches this function at all.
+      const progress = {};
+
+      for (const entry of entries) {
+        if (!entry.userId) continue;
+
+        // A forfeit pays for the questions actually answered, but no win bonus:
+        // nobody should be able to farm wins by having a rival walk out.
+        const won = !isDraw && !forfeit && entry.socketId === winnerSocketId;
+        const gained = xpForMatch({ score: entry.score, won });
+
+        // Increment rather than read-then-write: two matches finishing at once
+        // would otherwise each write an absolute total and one would be lost,
+        // while both still incremented totalXp, leaving the two out of step.
+        const row = await tx.topicProgress.upsert({
+          where: { userId_topicId: { userId: entry.userId, topicId: match.topicId } },
+          create: {
+            userId: entry.userId,
+            topicId: match.topicId,
+            xp: gained,
+            matches: 1
+          },
+          update: { xp: { increment: gained }, matches: { increment: 1 } },
+          select: { xp: true }
+        });
+
+        const after = row.xp;
+        const before = after - gained;
+
+        const user = await tx.user.update({
+          where: { id: entry.userId },
+          data: { totalXp: { increment: gained } },
+          select: { totalXp: true }
+        });
+
+        progress[entry.socketId] = {
+          gained,
+          topic: progressForXp(after),
+          overall: progressForXp(user.totalXp),
+          leveledUp: levelForXp(after) > levelForXp(before)
+        };
+      }
+
+      return { matchId: dbMatch.id, progress };
+    },
+    // Ten statements now, against a Neon compute that may be waking up. The
+    // catch upstream swallows a timeout, which would discard the whole match.
+    { timeout: 15000 }
+  );
 }
 
 export function computeUserStats(answers, user) {
