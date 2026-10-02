@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma.js';
 import { isBotSocket } from './botRegistry.js';
+import { levelForXp, xpForMatch, progressForXp } from './levels.js';
 
 function getPlayerEntries(match) {
   return Object.values(match.players);
@@ -47,6 +48,9 @@ export async function persistMatchResult(match, { winnerSocketId, isDraw, forfei
         answerRows.push({
           matchId: dbMatch.id,
           userId: player.userId,
+          // Which question this was, so difficulty can later be measured from
+          // how often people actually get it right.
+          questionId: match.questions?.[questionIndex]?.id ?? null,
           questionIndex,
           elapsedMs: result.elapsedMs,
           isCorrect: result.isCorrect,
@@ -79,7 +83,50 @@ export async function persistMatchResult(match, { winnerSocketId, isDraw, forfei
       }
     }
 
-    return dbMatch.id;
+    // Experience, for signed-in players only. Guests have nothing to save it
+    // to, and solo practice never reaches this function at all.
+    const progress = {};
+
+    for (const entry of entries) {
+      if (!entry.userId) continue;
+
+      // A forfeit pays for the questions actually answered, but no win bonus:
+      // nobody should be able to farm wins by having a rival walk out.
+      const won = !isDraw && !forfeit && entry.socketId === winnerSocketId;
+      const gained = xpForMatch({ score: entry.score, won });
+
+      const where = { userId_topicId: { userId: entry.userId, topicId: match.topicId } };
+      const existing = await tx.topicProgress.findUnique({ where, select: { xp: true } });
+      const before = existing?.xp ?? 0;
+      const after = before + gained;
+
+      await tx.topicProgress.upsert({
+        where,
+        create: {
+          userId: entry.userId,
+          topicId: match.topicId,
+          xp: after,
+          level: levelForXp(after),
+          matches: 1
+        },
+        update: { xp: after, level: levelForXp(after), matches: { increment: 1 } }
+      });
+
+      const user = await tx.user.update({
+        where: { id: entry.userId },
+        data: { totalXp: { increment: gained } },
+        select: { totalXp: true }
+      });
+
+      progress[entry.socketId] = {
+        gained,
+        topic: progressForXp(after),
+        overall: progressForXp(user.totalXp),
+        leveledUp: levelForXp(after) > levelForXp(before)
+      };
+    }
+
+    return { matchId: dbMatch.id, progress };
   });
 }
 
