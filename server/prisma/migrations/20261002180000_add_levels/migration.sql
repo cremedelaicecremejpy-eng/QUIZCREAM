@@ -10,7 +10,6 @@ CREATE TABLE "TopicProgress" (
     "userId" TEXT NOT NULL,
     "topicId" TEXT NOT NULL,
     "xp" INTEGER NOT NULL DEFAULT 0,
-    "level" INTEGER NOT NULL DEFAULT 1,
     "matches" INTEGER NOT NULL DEFAULT 0,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
