@@ -2,9 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="mask-icon" href="/favicon.svg" color="#2E3A4B">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
   <title>Quticks</title>
   <style>
     *,
@@ -1224,9 +1227,7 @@
     }
 
     #google-signin-btn {
-      display: flex;
-      justify-content: center;
-      min-height: 44px;
+      display: none;
     }
 
     .guest-btn {
@@ -1681,23 +1682,273 @@
       border: none;
       color: #ffffff;
     }
+
+    body.opening-auth {
+      background: #C45F12;
+      padding: 0;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+
+    .card.opening-auth {
+      position: relative;
+      overflow: hidden;
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      width: 100%;
+      min-height: 100dvh;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card:not(.opening-auth) .auth-stage {
+      display: none;
+    }
+
+    .auth-stage {
+      position: relative;
+      width: 100%;
+      min-height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: max(1.5rem, env(safe-area-inset-top)) 1.25rem max(1.5rem, env(safe-area-inset-bottom));
+      background: #C45F12;
+    }
+
+    .auth-wallpaper {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .auth-wallpaper .auth-icon {
+      position: absolute;
+      color: #ffffff;
+      line-height: 0;
+    }
+
+    .auth-wallpaper .auth-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .auth-stage .auth-screen {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 320px);
+      margin: 0 auto;
+    }
+
+    .auth-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.75rem;
+    }
+
+    .auth-wordmark,
+    .card.opening-auth h1.auth-wordmark {
+      font-family: "Bungee", system-ui, sans-serif;
+      font-size: clamp(2.35rem, 9vw, 2.75rem);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: #ffffff;
+      line-height: 1;
+      text-transform: none;
+      margin-bottom: 0;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .auth-cta {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      width: min(100%, 278px);
+    }
+
+    .auth-ghost-btn,
+    .auth-google-slot {
+      width: 100%;
+    }
+
+    .auth-ghost-btn {
+      appearance: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 52px;
+      padding: 0.875rem 1.25rem;
+      border-radius: 16px;
+      border: 2px solid #ffffff;
+      background: rgba(255, 255, 255, 0.09);
+      color: #ffffff;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .auth-ghost-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .auth-ghost-btn:focus-visible {
+      outline: 3px solid rgba(255, 255, 255, 0.7);
+      outline-offset: 2px;
+    }
+
+    .auth-google-slot {
+      position: relative;
+    }
+
+    .auth-google-slot.ready #google-signin-btn {
+      display: block;
+      position: absolute;
+      inset: 0;
+      opacity: 0.01;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    .auth-back {
+      margin: 0 0 1rem;
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .opening-auth .auth-email-panel {
+      text-align: left;
+    }
+
+    .opening-auth .auth-email-panel .auth-method-tab,
+    .opening-auth .auth-email-panel .auth-tab {
+      border-color: rgba(255, 255, 255, 0.45);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .opening-auth .auth-email-panel .auth-method-tab.active,
+    .opening-auth .auth-email-panel .auth-tab.active {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+
+    .opening-auth .auth-email-panel .auth-form label,
+    .opening-auth .auth-email-panel .auth-hint {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .opening-auth .auth-email-panel .auth-form input {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.55);
+      color: #ffffff;
+    }
+
+    .opening-auth .auth-email-panel .auth-form input::placeholder {
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .opening-auth .auth-email-panel .auth-form input:focus {
+      border-color: #ffffff;
+    }
+
+    .opening-auth .auth-email-panel .auth-submit {
+      background: #ffffff;
+      color: #C45F12;
+    }
+
+    .opening-auth .auth-screen .error-msg {
+      color: #fff1e6;
+    }
+
+    .opening-auth .auth-success {
+      color: #ecfccb;
+    }
+
+    @media (min-width: 768px) {
+      body.opening-auth {
+        background:
+          radial-gradient(circle at 50% 42%, #d36a18 0%, #9b4a0e 62%, #7a390b 100%);
+        padding: 1.5rem;
+      }
+
+      .card.opening-auth {
+        min-height: 100dvh;
+        padding: 1.5rem;
+        background: transparent;
+      }
+
+      .auth-stage {
+        width: 390px;
+        height: min(844px, calc(100dvh - 3rem));
+        min-height: 0;
+        padding: 1.5rem 1.25rem;
+        border-radius: 32px;
+        background: #C45F12;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.12),
+          0 28px 80px rgba(0, 0, 0, 0.32);
+      }
+
+      .auth-wordmark,
+      .card.opening-auth h1.auth-wordmark {
+        font-size: 2.75rem;
+      }
+
+      .auth-cta {
+        width: 278px;
+      }
+
+      .auth-stage .auth-screen {
+        width: 278px;
+      }
+    }
   </style>
 </head>
-<body>
-  <div id="card" class="card">
+<body class="opening-auth">
+  <div id="card" class="card opening-auth">
+    <div class="auth-stage">
+    <div id="auth-wallpaper" class="auth-wallpaper" aria-hidden="true"></div>
     <div id="auth-screen" class="auth-screen screen-panel screen-visible">
-      <h1>Quticks</h1>
-      <p class="subtitle">Sign in to save wins and match history — or play as a guest.</p>
-
-      <div class="auth-method-tabs">
-        <button id="auth-method-email" class="auth-method-tab active" type="button" onclick="showAuthChannel('email')">Email</button>
-        <button id="auth-method-phone" class="auth-method-tab" type="button" onclick="showAuthChannel('phone')">Phone</button>
+      <div id="auth-landing" class="auth-hero">
+        <h1 class="auth-wordmark">QUTICKS</h1>
+        <div class="auth-cta">
+          <div class="auth-google-slot" id="auth-google-slot">
+            <button class="auth-ghost-btn" id="auth-google-face" type="button" onclick="startGoogleSignIn()">Sign in with Google</button>
+            <div id="google-signin-btn"></div>
+          </div>
+          <button class="auth-ghost-btn" type="button" onclick="showEmailSignIn()">Sign in with email</button>
+          <button class="auth-ghost-btn" type="button" onclick="continueAsGuest()">Play as guest</button>
+        </div>
       </div>
 
-      <div class="auth-tabs">
-        <button id="auth-tab-login" class="auth-tab active" type="button" onclick="showAuthMode('login')">Sign In</button>
-        <button id="auth-tab-register" class="auth-tab" type="button" onclick="showAuthMode('register')">Create Account</button>
-      </div>
+      <div id="auth-email-panel" class="auth-email-panel hidden">
+        <button class="auth-back" type="button" onclick="showAuthLanding()">Back</button>
+        <div class="auth-method-tabs">
+          <button id="auth-method-email" class="auth-method-tab active" type="button" onclick="showAuthChannel('email')">Email</button>
+          <button id="auth-method-phone" class="auth-method-tab" type="button" onclick="showAuthChannel('phone')">Phone</button>
+        </div>
+
+        <div class="auth-tabs">
+          <button id="auth-tab-login" class="auth-tab active" type="button" onclick="showAuthMode('login')">Sign In</button>
+          <button id="auth-tab-register" class="auth-tab" type="button" onclick="showAuthMode('register')">Create Account</button>
+        </div>
 
       <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
         <label for="login-email">Email</label>
@@ -1739,16 +1990,11 @@
         <p class="auth-hint">Include country code (+91, +1, +44…). We will text you a 6-digit code.</p>
         <button class="auth-submit" type="submit">Send signup code</button>
       </form>
+      </div>
 
       <p id="auth-error" class="error-msg"></p>
       <p id="auth-success" class="auth-success hidden"></p>
-
-      <div id="google-auth-wrap" class="hidden">
-        <div class="auth-divider">or</div>
-        <div id="google-signin-btn"></div>
-      </div>
-
-      <button class="guest-btn" type="button" onclick="continueAsGuest()">Continue as guest</button>
+    </div>
     </div>
 
     <div id="verify-screen" class="auth-screen verify-screen screen-panel hidden">
@@ -2455,7 +2701,70 @@
       document.getElementById('register-form').classList.toggle('hidden', channel !== 'email' || isLogin);
       document.getElementById('phone-login-form').classList.toggle('hidden', channel !== 'phone' || !isLogin);
       document.getElementById('phone-register-form').classList.toggle('hidden', channel !== 'phone' || isLogin);
-      document.getElementById('google-auth-wrap').classList.toggle('hidden', channel !== 'email' || !googleClientId);
+    }
+
+    function showAuthLanding() {
+      document.getElementById('auth-landing').classList.remove('hidden');
+      document.getElementById('auth-email-panel').classList.add('hidden');
+      document.getElementById('auth-error').textContent = '';
+    }
+
+    function showEmailSignIn() {
+      document.getElementById('auth-landing').classList.add('hidden');
+      document.getElementById('auth-email-panel').classList.remove('hidden');
+      showAuthMode(document.getElementById('auth-tab-login').classList.contains('active') ? 'login' : 'register');
+    }
+
+    function startGoogleSignIn() {
+      document.getElementById('auth-error').textContent = '';
+      if (!googleClientId) {
+        document.getElementById('auth-error').textContent = 'Google sign-in is not available right now.';
+        return;
+      }
+      const clickable = document.querySelector('#google-signin-btn [role="button"]');
+      if (clickable) {
+        clickable.click();
+        return;
+      }
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.prompt();
+      }
+    }
+
+    function buildAuthWallpaper() {
+      const root = document.getElementById('auth-wallpaper');
+      if (!root || root.dataset.ready) return;
+
+      const mark = '<svg viewBox="6.5 2.8 11 18.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 7.6c0-2.3 1.8-4.1 3.8-4.1 2.1 0 3.8 1.7 3.8 3.9 0 2.1-1.3 3-2.5 3.9-1 .7-1.7 1.5-1.7 3"/><path d="M12 19.2h.01"/></svg>';
+      const trophy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>';
+      const hourglass = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>';
+      const kinds = [mark, trophy, hourglass];
+      const frag = document.createDocumentFragment();
+
+      for (let i = 0; i < 66; i += 1) {
+        const span = document.createElement('span');
+        span.className = 'auth-icon';
+        span.innerHTML = kinds[i % 3];
+        const col = i % 6;
+        const row = Math.floor(i / 6);
+        const size = 26 + ((i * 7) % 14);
+        span.style.width = `${size}px`;
+        span.style.left = `${col * 16.6 + (row % 2 ? 3 : 0) + ((i * 3) % 5)}%`;
+        span.style.top = `${row * 9.2 + ((i * 5) % 4)}%`;
+        span.style.opacity = String(0.22 + ((i * 13) % 12) / 100);
+        span.style.transform = `rotate(${((i * 17) % 41) - 20}deg)`;
+        frag.appendChild(span);
+      }
+
+      root.appendChild(frag);
+      root.dataset.ready = '1';
+    }
+
+    function applyOpeningShell(screenId) {
+      const isOpening = screenId === 'auth-screen';
+      document.body.classList.toggle('opening-auth', isOpening);
+      document.getElementById('card').classList.toggle('opening-auth', isOpening);
+      if (isOpening) buildAuthWallpaper();
     }
 
     function showAuthMode(mode) {
@@ -2515,6 +2824,7 @@
       document.getElementById('phone-otp-status').textContent = '';
       showAuthMode(pendingPhoneMode === 'signup' ? 'register' : 'login');
       showScreen('auth-screen');
+      showEmailSignIn();
     }
 
     async function handlePhoneSendOtp(event, mode) {
@@ -2602,6 +2912,7 @@
       document.getElementById('verify-status').textContent = '';
       showAuthMode('login');
       showScreen('auth-screen');
+      showEmailSignIn();
     }
 
     async function resendVerificationEmail() {
@@ -2635,6 +2946,7 @@
       if (!verified) return;
 
       window.history.replaceState({}, '', window.location.pathname);
+      showEmailSignIn();
       showAuthMode('login');
 
       if (verified === 'success') {
@@ -2755,13 +3067,15 @@
       clearSession();
       isGuest = false;
       showScreen('auth-screen');
+      showAuthLanding();
       document.getElementById('auth-error').textContent = '';
     }
 
     function setupGoogleSignIn() {
       if (!googleClientId || !window.google?.accounts?.id) return;
 
-      document.getElementById('google-auth-wrap').classList.remove('hidden');
+      const slot = document.getElementById('auth-google-slot');
+      const width = Math.max(220, Math.floor((slot?.getBoundingClientRect().width) || 278));
 
       window.google.accounts.id.initialize({
         client_id: googleClientId,
@@ -2771,8 +3085,10 @@
       window.google.accounts.id.renderButton(document.getElementById('google-signin-btn'), {
         theme: 'outline',
         size: 'large',
-        width: 320
+        width
       });
+
+      slot?.classList.add('ready');
     }
 
     async function loadAuthConfig() {
@@ -2818,6 +3134,7 @@
     async function initApp() {
       updateSoundToggle();
       setupConfirmModal();
+      buildAuthWallpaper();
       document.getElementById('card').classList.add('card-enter');
       document.addEventListener('visibilitychange', handleVisibilityResume);
       window.addEventListener('focus', handleVisibilityResume);
@@ -3248,7 +3565,7 @@
         'topic-screen': ['.home-menu-btn', '.topic-row'],
         'score-screen': ['.score-value', '.score-label', '.btn-row'],
         'match-score-screen': ['.match-result', '.match-scores > div', '.summary-chart-wrap', '.round-summary-table', '.btn-row'],
-        'auth-screen': ['.auth-tabs', '.auth-form:not(.hidden)', '#google-auth-wrap:not(.hidden)', '.guest-btn'],
+        'auth-screen': ['.auth-wordmark', '.auth-ghost-btn', '.auth-email-panel:not(.hidden) .auth-form:not(.hidden)'],
         'verify-screen': ['.verify-icon', '.verify-message', '.verify-actions'],
         'waiting-screen': ['.waiting-ring', '.waiting-title', '.waiting-topic', '.waiting-player', '.waiting-status', '.cancel-btn']
       };
@@ -3267,9 +3584,13 @@
       const next = document.getElementById(screenId);
       const prev = currentScreenId ? document.getElementById(currentScreenId) : null;
 
-      card.classList.toggle('quiz-layout', screenId === 'quiz-screen');
-      card.classList.toggle('summary-layout', screenId === 'match-score-screen');
-      card.classList.toggle('topic-layout', screenId === 'topic-screen');
+      const applyCardChrome = () => {
+        card.classList.toggle('quiz-layout', screenId === 'quiz-screen');
+        card.classList.toggle('summary-layout', screenId === 'match-score-screen');
+        card.classList.toggle('topic-layout', screenId === 'topic-screen');
+        card.classList.toggle('history-layout', screenId === 'history-screen');
+        applyOpeningShell(screenId);
+      };
 
       const activateScreen = () => {
         ALL_SCREENS.forEach((id) => {
@@ -3279,6 +3600,7 @@
           el.classList.toggle('screen-visible', isActive);
           el.classList.remove('screen-leaving', 'screen-entering');
         });
+        applyCardChrome();
         currentScreenId = screenId;
         if (screenId === 'topic-screen') showHomeView('menu');
         runScreenEntrance(screenId);
@@ -3295,6 +3617,7 @@
       setTimeout(() => {
         prev.classList.add('hidden');
         prev.classList.remove('screen-leaving');
+        applyCardChrome();
 
         next.classList.remove('hidden');
         next.classList.add('screen-entering');

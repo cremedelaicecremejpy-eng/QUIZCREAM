@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="mask-icon" href="/favicon.svg" color="#2E3A4B">
-  <title>Trivia Question</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+  <title>Quticks</title>
   <style>
     *,
     *::before,
@@ -18,6 +21,7 @@
     body {
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -1223,9 +1227,7 @@
     }
 
     #google-signin-btn {
-      display: flex;
-      justify-content: center;
-      min-height: 44px;
+      display: none;
     }
 
     .guest-btn {
@@ -1236,28 +1238,6 @@
       font-weight: 600;
       cursor: pointer;
       text-decoration: underline;
-    }
-
-    .user-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 0.75rem;
-      background: #f4f4f8;
-      border-radius: 10px;
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
-      text-align: left;
-    }
-
-    .user-bar-info {
-      font-size: 0.875rem;
-      color: #374151;
-      line-height: 1.4;
-    }
-
-    .user-bar-info strong {
-      color: #667eea;
     }
 
     .logout-btn {
@@ -1322,36 +1302,6 @@
       margin-bottom: 1rem;
     }
 
-    .history-screen {
-      text-align: left;
-    }
-
-    .history-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
-
-    .history-header h1 {
-      margin: 0;
-      font-size: 1.5rem;
-    }
-
-    .back-btn,
-    .stats-btn {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: #667eea;
-      background: #ffffff;
-      border: 2px solid #667eea;
-      border-radius: 8px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
     .stats-section-title {
       font-size: 0.875rem;
       font-weight: 700;
@@ -1411,28 +1361,594 @@
     .result-loss { color: #dc2626; font-weight: 700; }
     .result-draw { color: #6b7280; font-weight: 700; }
 
-    .user-bar-actions {
+    .home-header {
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .home-view {
+      text-align: left;
+    }
+
+    .home-view.hidden {
+      display: none;
+    }
+
+    .home-view-head {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .home-view-title {
+      margin: 0;
+      font-size: 1.125rem;
+    }
+
+    .home-back-btn {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #667eea;
+      background: #ffffff;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .home-back-btn:hover {
+      background: #f0f1fe;
+      transform: translateX(-2px);
+    }
+
+    .home-menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .home-menu-btn {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+      padding: 1.1rem 1.25rem;
+      border: 2px solid #ececf4;
+      border-radius: 12px;
+      background: #f8f8fc;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+
+    .home-menu-btn:hover {
+      background: #ffffff;
+      border-color: #667eea;
+      transform: translateY(-1px);
+    }
+
+    .home-menu-icon {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .home-menu-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .home-menu-text strong {
+      font-size: 1rem;
+      color: #1a1a2e;
+    }
+
+    .home-menu-text span {
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+
+    .home-user-line {
+      margin-top: 1rem;
+      font-size: 0.8125rem;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+    }
+
+    .home-user-line strong {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .stats-subtabs {
       display: flex;
       gap: 0.5rem;
-      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .stats-subtab {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      border: 2px solid #ececf4;
+      border-radius: 8px;
+      background: #f8f8fc;
+      color: #6b7280;
+      cursor: pointer;
+    }
+
+    .stats-subtab.active {
+      border-color: #667eea;
+      background: #ffffff;
+      color: #667eea;
+    }
+
+    .streak-headline {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      margin: 0.5rem 0 0.25rem;
+    }
+
+    .streak-flame {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .streak-count {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #667eea;
+    }
+
+    .streak-unit {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #6b7280;
+    }
+
+    .streak-sub {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 0.5rem;
+    }
+
+    .streak-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+      margin-top: 0.5rem;
+    }
+
+    .streak-cell {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      background: #ececf4;
+      transition: transform 0.15s;
+    }
+
+    .streak-cell.filled {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+
+    .streak-cell.today {
+      outline: 2px solid #764ba2;
+      outline-offset: 1px;
+    }
+
+    .settings-section {
+      display: block;
+      margin-bottom: 1rem;
+    }
+
+    .settings-label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.35rem;
+    }
+
+    .settings-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .settings-input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      border: 2px solid #ececf4;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .settings-input:focus {
+      border-color: #667eea;
+    }
+
+    .settings-save {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #ffffff;
+      background: #667eea;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .settings-status {
+      font-size: 0.8125rem;
+      margin-top: 0.5rem;
+      min-height: 1rem;
+    }
+
+    .settings-status.ok { color: #059669; }
+    .settings-status.err { color: #dc2626; }
+
+    .settings-note {
+      font-size: 0.8125rem;
+      color: #9ca3af;
+      margin: 1rem 0;
+    }
+
+    .exit-game-btn {
+      margin-left: 0.5rem;
+      border: 2px solid #ececf4;
+      background: #ffffff;
+      color: #6b7280;
+      border-radius: 999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .exit-game-btn:hover {
+      border-color: #dc2626;
+      color: #dc2626;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: rgba(26, 26, 46, 0.55);
+      animation: modal-fade 0.18s ease;
+    }
+
+    @keyframes modal-fade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 1.75rem;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    }
+
+    .modal-title {
+      font-size: 1.125rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-message {
+      font-size: 0.9375rem;
+      color: #6b7280;
+      line-height: 1.5;
+      margin-bottom: 1.25rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .modal-btn.ghost {
+      background: #ffffff;
+      border: 2px solid #667eea;
+      color: #667eea;
+    }
+
+    .modal-btn.danger {
+      background: #dc2626;
+      border: none;
+      color: #ffffff;
+    }
+
+    body.opening-auth {
+      background: #C45F12;
+      padding: 0;
+      align-items: stretch;
+      justify-content: stretch;
+    }
+
+    .card.opening-auth {
+      position: relative;
+      overflow: hidden;
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      width: 100%;
+      min-height: 100dvh;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card:not(.opening-auth) .auth-stage {
+      display: none;
+    }
+
+    .auth-stage {
+      position: relative;
+      width: 100%;
+      min-height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: max(1.5rem, env(safe-area-inset-top)) 1.25rem max(1.5rem, env(safe-area-inset-bottom));
+      background: #C45F12;
+    }
+
+    .auth-wallpaper {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .auth-wallpaper .auth-icon {
+      position: absolute;
+      color: #ffffff;
+      line-height: 0;
+    }
+
+    .auth-wallpaper .auth-icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .auth-stage .auth-screen {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 320px);
+      margin: 0 auto;
+    }
+
+    .auth-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.75rem;
+    }
+
+    .auth-wordmark,
+    .card.opening-auth h1.auth-wordmark {
+      font-family: "Bungee", system-ui, sans-serif;
+      font-size: clamp(2.35rem, 9vw, 2.75rem);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: #ffffff;
+      line-height: 1;
+      text-transform: none;
+      margin-bottom: 0;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    .auth-cta {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      width: min(100%, 278px);
+    }
+
+    .auth-ghost-btn,
+    .auth-google-slot {
+      width: 100%;
+    }
+
+    .auth-ghost-btn {
+      appearance: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 52px;
+      padding: 0.875rem 1.25rem;
+      border-radius: 16px;
+      border: 2px solid #ffffff;
+      background: rgba(255, 255, 255, 0.09);
+      color: #ffffff;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .auth-ghost-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .auth-ghost-btn:focus-visible {
+      outline: 3px solid rgba(255, 255, 255, 0.7);
+      outline-offset: 2px;
+    }
+
+    .auth-google-slot {
+      position: relative;
+    }
+
+    .auth-google-slot.ready #google-signin-btn {
+      display: block;
+      position: absolute;
+      inset: 0;
+      opacity: 0.01;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    .auth-back {
+      margin: 0 0 1rem;
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .opening-auth .auth-email-panel {
+      text-align: left;
+    }
+
+    .opening-auth .auth-email-panel .auth-method-tab,
+    .opening-auth .auth-email-panel .auth-tab {
+      border-color: rgba(255, 255, 255, 0.45);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .opening-auth .auth-email-panel .auth-method-tab.active,
+    .opening-auth .auth-email-panel .auth-tab.active {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+
+    .opening-auth .auth-email-panel .auth-form label,
+    .opening-auth .auth-email-panel .auth-hint {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .opening-auth .auth-email-panel .auth-form input {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.55);
+      color: #ffffff;
+    }
+
+    .opening-auth .auth-email-panel .auth-form input::placeholder {
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .opening-auth .auth-email-panel .auth-form input:focus {
+      border-color: #ffffff;
+    }
+
+    .opening-auth .auth-email-panel .auth-submit {
+      background: #ffffff;
+      color: #C45F12;
+    }
+
+    .opening-auth .auth-screen .error-msg {
+      color: #fff1e6;
+    }
+
+    .opening-auth .auth-success {
+      color: #ecfccb;
+    }
+
+    @media (min-width: 768px) {
+      body.opening-auth {
+        background:
+          radial-gradient(circle at 50% 42%, #d36a18 0%, #9b4a0e 62%, #7a390b 100%);
+        padding: 1.5rem;
+      }
+
+      .card.opening-auth {
+        min-height: 100dvh;
+        padding: 1.5rem;
+        background: transparent;
+      }
+
+      .auth-stage {
+        width: 390px;
+        height: min(844px, calc(100dvh - 3rem));
+        min-height: 0;
+        padding: 1.5rem 1.25rem;
+        border-radius: 32px;
+        background: #C45F12;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.12),
+          0 28px 80px rgba(0, 0, 0, 0.32);
+      }
+
+      .auth-wordmark,
+      .card.opening-auth h1.auth-wordmark {
+        font-size: 2.75rem;
+      }
+
+      .auth-cta {
+        width: 278px;
+      }
+
+      .auth-stage .auth-screen {
+        width: 278px;
+      }
     }
   </style>
 </head>
-<body>
-  <div id="card" class="card">
+<body class="opening-auth">
+  <div id="card" class="card opening-auth">
+    <div class="auth-stage">
+    <div id="auth-wallpaper" class="auth-wallpaper" aria-hidden="true"></div>
     <div id="auth-screen" class="auth-screen screen-panel screen-visible">
-      <h1>Quiz Cream</h1>
-      <p class="subtitle">Sign in to save wins and match history — or play as a guest.</p>
-
-      <div class="auth-method-tabs">
-        <button id="auth-method-email" class="auth-method-tab active" type="button" onclick="showAuthChannel('email')">Email</button>
-        <button id="auth-method-phone" class="auth-method-tab" type="button" onclick="showAuthChannel('phone')">Phone</button>
+      <div id="auth-landing" class="auth-hero">
+        <h1 class="auth-wordmark">QUTICKS</h1>
+        <div class="auth-cta">
+          <div class="auth-google-slot" id="auth-google-slot">
+            <button class="auth-ghost-btn" id="auth-google-face" type="button" onclick="startGoogleSignIn()">Sign in with Google</button>
+            <div id="google-signin-btn"></div>
+          </div>
+          <button class="auth-ghost-btn" type="button" onclick="showEmailSignIn()">Sign in with email</button>
+          <button class="auth-ghost-btn" type="button" onclick="continueAsGuest()">Play as guest</button>
+        </div>
       </div>
 
-      <div class="auth-tabs">
-        <button id="auth-tab-login" class="auth-tab active" type="button" onclick="showAuthMode('login')">Sign In</button>
-        <button id="auth-tab-register" class="auth-tab" type="button" onclick="showAuthMode('register')">Create Account</button>
-      </div>
+      <div id="auth-email-panel" class="auth-email-panel hidden">
+        <button class="auth-back" type="button" onclick="showAuthLanding()">Back</button>
+        <div class="auth-method-tabs">
+          <button id="auth-method-email" class="auth-method-tab active" type="button" onclick="showAuthChannel('email')">Email</button>
+          <button id="auth-method-phone" class="auth-method-tab" type="button" onclick="showAuthChannel('phone')">Phone</button>
+        </div>
+
+        <div class="auth-tabs">
+          <button id="auth-tab-login" class="auth-tab active" type="button" onclick="showAuthMode('login')">Sign In</button>
+          <button id="auth-tab-register" class="auth-tab" type="button" onclick="showAuthMode('register')">Create Account</button>
+        </div>
 
       <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
         <label for="login-email">Email</label>
@@ -1474,16 +1990,11 @@
         <p class="auth-hint">Include country code (+91, +1, +44…). We will text you a 6-digit code.</p>
         <button class="auth-submit" type="submit">Send signup code</button>
       </form>
+      </div>
 
       <p id="auth-error" class="error-msg"></p>
       <p id="auth-success" class="auth-success hidden"></p>
-
-      <div id="google-auth-wrap" class="hidden">
-        <div class="auth-divider">or</div>
-        <div id="google-signin-btn"></div>
-      </div>
-
-      <button class="guest-btn" type="button" onclick="continueAsGuest()">Continue as guest</button>
+    </div>
     </div>
 
     <div id="verify-screen" class="auth-screen verify-screen screen-panel hidden">
@@ -1526,107 +2037,172 @@
     </div>
 
     <div id="topic-screen" class="topic-screen screen-panel hidden">
-      <h1>Quiz Cream</h1>
-      <p class="subtitle">Solo practice or 1v1 battle — 7 questions, 7 seconds each.</p>
-
-      <div id="user-bar" class="user-bar hidden">
-        <div class="user-bar-info">
-          Signed in as <strong id="user-bar-name"></strong><br />
-          <span id="user-bar-record"></span>
+      <div id="home-menu" class="home-view">
+        <div class="home-header">
+          <h1>Quticks</h1>
+          <p class="subtitle">Solo practice or 1v1 battle — 7 questions, 7 seconds each.</p>
         </div>
-        <div class="user-bar-actions">
-          <button class="stats-btn" type="button" onclick="openHistoryScreen()">My Stats</button>
+
+        <div class="home-menu-list">
+          <button class="home-menu-btn" type="button" onclick="showHomeView('play')">
+            <span class="home-menu-icon">🎮</span>
+            <span class="home-menu-text"><strong>Play</strong><span>Solo &amp; 1v1 games</span></span>
+          </button>
+          <button class="home-menu-btn" type="button" onclick="showHomeView('stats')">
+            <span class="home-menu-icon">📊</span>
+            <span class="home-menu-text"><strong>Stats</strong><span>Records, history &amp; daily streak</span></span>
+          </button>
+          <button class="home-menu-btn" type="button" onclick="showHomeView('settings')">
+            <span class="home-menu-icon">⚙️</span>
+            <span class="home-menu-text"><strong>Settings</strong><span>Profile &amp; preferences</span></span>
+          </button>
+        </div>
+      </div>
+
+      <div id="home-view-play" class="home-view hidden">
+        <div class="home-view-head">
+          <button class="home-back-btn" type="button" onclick="showHomeView('menu')">← Back</button>
+          <h1 class="home-view-title">Play</h1>
+        </div>
+        <p id="guest-note" class="guest-note hidden">Playing as guest — wins won't be saved to an account.</p>
+        <input id="nickname" class="nickname-field" type="text" maxlength="20" placeholder="Your nickname" />
+        <div class="topic-search-wrap">
+          <svg class="topic-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle>
+            <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+          <input
+            id="topic-search"
+            type="search"
+            placeholder="Search topics..."
+            autocomplete="off"
+            oninput="filterTopics(this.value)"
+          />
+        </div>
+        <div id="topic-list" class="topic-list"></div>
+        <p id="topic-search-empty" class="topic-search-empty hidden">No topics match your search.</p>
+        <p id="topic-error" class="error-msg"></p>
+      </div>
+
+      <div id="home-view-stats" class="home-view hidden">
+        <div class="home-view-head">
+          <button class="home-back-btn" type="button" onclick="showHomeView('menu')">← Back</button>
+          <h1 class="home-view-title">Stats</h1>
+        </div>
+
+        <p id="stats-signed-out" class="guest-note hidden">
+          Sign in to track your stats, match history, and daily streak.
+        </p>
+
+        <div id="stats-signed-in" class="hidden">
+          <div class="stats-subtabs">
+            <button id="stats-sub-overview-tab" class="stats-subtab active" type="button" onclick="showStatsSub('overview')">Overview</button>
+            <button id="stats-sub-streak-tab" class="stats-subtab" type="button" onclick="showStatsSub('streak')">Daily streak</button>
+          </div>
+
+          <div id="stats-sub-overview">
+            <p id="history-error" class="error-msg"></p>
+
+            <p class="stats-section-title">Overall</p>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <span class="stat-label">Win rate</span>
+                <span id="stat-win-rate" class="stat-value">0%</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Record</span>
+                <span id="stat-record" class="stat-value">0W · 0L</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">1v1 matches</span>
+                <span id="stat-matches" class="stat-value">0</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Accuracy</span>
+                <span id="stat-accuracy" class="stat-value">0%</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Avg correct / match</span>
+                <span id="stat-avg-correct" class="stat-value">0</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Avg answer time</span>
+                <span id="stat-avg-time" class="stat-value">—</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Avg time (correct)</span>
+                <span id="stat-avg-correct-time" class="stat-value">—</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Avg time (wrong)</span>
+                <span id="stat-avg-wrong-time" class="stat-value">—</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Questions answered</span>
+                <span id="stat-questions" class="stat-value">0</span>
+              </div>
+            </div>
+
+            <p class="stats-section-title">Recent matches</p>
+            <div class="history-table-wrap">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Topic</th>
+                    <th>Opponent</th>
+                    <th>Score</th>
+                    <th>Result</th>
+                    <th>Acc.</th>
+                    <th>Avg time</th>
+                  </tr>
+                </thead>
+                <tbody id="history-table-body"></tbody>
+              </table>
+            </div>
+            <p id="history-empty" class="guest-note hidden">No completed 1v1 matches yet. Play a battle!</p>
+          </div>
+
+          <div id="stats-sub-streak" class="hidden">
+            <div class="streak-headline">
+              <span class="streak-flame">🔥</span>
+              <span id="streak-count" class="streak-count">0</span>
+              <span class="streak-unit">day streak</span>
+            </div>
+            <p id="streak-sub" class="streak-sub"></p>
+
+            <p class="stats-section-title">Last 30 days</p>
+            <div id="streak-grid" class="streak-grid"></div>
+            <p id="streak-error" class="error-msg"></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="home-view-settings" class="home-view hidden">
+        <div class="home-view-head">
+          <button class="home-back-btn" type="button" onclick="showHomeView('menu')">← Back</button>
+          <h1 class="home-view-title">Settings</h1>
+        </div>
+
+        <p id="settings-signed-out" class="guest-note hidden">
+          Sign in to change your profile and preferences.
+        </p>
+
+        <div id="settings-signed-in" class="hidden">
+          <p class="stats-section-title">Profile</p>
+          <form class="settings-section" onsubmit="saveUsername(event)">
+            <label class="settings-label" for="settings-username">Username</label>
+            <div class="settings-row">
+              <input id="settings-username" class="settings-input" type="text" minlength="2" maxlength="20" autocomplete="username" required />
+              <button class="settings-save" type="submit">Save</button>
+            </div>
+            <p id="settings-username-status" class="settings-status"></p>
+          </form>
+
+          <p class="settings-note">More settings coming soon.</p>
           <button class="logout-btn" type="button" onclick="logout()">Log out</button>
         </div>
       </div>
-
-      <p id="guest-note" class="guest-note hidden">Playing as guest — wins won't be saved to an account.</p>
-      <input id="nickname" class="nickname-field" type="text" maxlength="20" placeholder="Your nickname" />
-      <div class="topic-search-wrap">
-        <svg class="topic-search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle>
-          <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-        </svg>
-        <input
-          id="topic-search"
-          type="search"
-          placeholder="Search topics..."
-          autocomplete="off"
-          oninput="filterTopics(this.value)"
-        />
-      </div>
-      <div id="topic-list" class="topic-list"></div>
-      <p id="topic-search-empty" class="topic-search-empty hidden">No topics match your search.</p>
-      <p id="topic-error" class="error-msg"></p>
-    </div>
-
-    <div id="history-screen" class="history-screen screen-panel hidden">
-      <div class="history-header">
-        <h1>My Stats</h1>
-        <button class="back-btn" type="button" onclick="showScreen('topic-screen')">Back</button>
-      </div>
-
-      <p id="history-user-line" class="subtitle"></p>
-      <p id="history-error" class="error-msg"></p>
-
-      <p class="stats-section-title">Overall</p>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <span class="stat-label">Win rate</span>
-          <span id="stat-win-rate" class="stat-value">0%</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Record</span>
-          <span id="stat-record" class="stat-value">0W · 0L</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">1v1 matches</span>
-          <span id="stat-matches" class="stat-value">0</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Accuracy</span>
-          <span id="stat-accuracy" class="stat-value">0%</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Avg correct / match</span>
-          <span id="stat-avg-correct" class="stat-value">0</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Avg answer time</span>
-          <span id="stat-avg-time" class="stat-value">—</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Avg time (correct)</span>
-          <span id="stat-avg-correct-time" class="stat-value">—</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Avg time (wrong)</span>
-          <span id="stat-avg-wrong-time" class="stat-value">—</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Questions answered</span>
-          <span id="stat-questions" class="stat-value">0</span>
-        </div>
-      </div>
-
-      <p class="stats-section-title">Recent matches</p>
-      <div class="history-table-wrap">
-        <table class="history-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Topic</th>
-              <th>Opponent</th>
-              <th>Score</th>
-              <th>Result</th>
-              <th>Acc.</th>
-              <th>Avg time</th>
-            </tr>
-          </thead>
-          <tbody id="history-table-body"></tbody>
-        </table>
-      </div>
-      <p id="history-empty" class="guest-note hidden">No saved 1v1 matches yet. Sign in and play a battle!</p>
     </div>
 
     <div id="waiting-screen" class="waiting-screen screen-panel hidden">
@@ -1645,6 +2221,7 @@
       <p class="countdown-label">Battle starts in</p>
       <p id="countdown-value" class="countdown-value">3</p>
       <p id="countdown-vs" class="countdown-vs"></p>
+      <button id="countdown-cancel" class="cancel-btn hidden" type="button" onclick="cancelCountdown()">Cancel</button>
     </div>
 
     <div id="quiz-screen" class="quiz-screen screen-panel hidden">
@@ -1653,6 +2230,7 @@
           <span class="progress" id="progress"></span>
           <span id="timer-label" class="timer-label">7.0s</span>
           <button id="sound-toggle" class="sound-toggle" type="button" onclick="toggleSound()" aria-label="Toggle sound">🔊</button>
+          <button id="exit-game-btn" class="exit-game-btn" type="button" onclick="confirmExitGame()" aria-label="Leave game">Leave</button>
         </div>
         <div class="timer-track">
           <div id="timer-fill" class="timer-fill"></div>
@@ -1750,6 +2328,19 @@
     </div>
   </div>
 
+  <p id="home-user-line" class="home-user-line hidden"></p>
+
+  <div id="confirm-modal" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+      <p id="confirm-modal-title" class="modal-title">Leave the match?</p>
+      <p id="confirm-modal-message" class="modal-message"></p>
+      <div class="modal-actions">
+        <button id="confirm-modal-cancel" class="modal-btn ghost" type="button">Keep playing</button>
+        <button id="confirm-modal-confirm" class="modal-btn danger" type="button">Leave</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
@@ -1771,7 +2362,6 @@
       'verify-screen',
       'phone-otp-screen',
       'topic-screen',
-      'history-screen',
       'waiting-screen',
       'countdown-screen',
       'quiz-screen',
@@ -1870,6 +2460,7 @@
       setToken(token);
       currentUser = user;
       isGuest = false;
+      statsPanelLoaded = false;
       resetSocket();
       updateTopicScreenAuth();
       refreshUserRecord();
@@ -1878,6 +2469,7 @@
     function clearSession() {
       clearToken();
       currentUser = null;
+      statsPanelLoaded = false;
       resetSocket();
       updateTopicScreenAuth();
     }
@@ -1934,30 +2526,67 @@
       }
     }
 
-    async function openHistoryScreen() {
-      if (!currentUser) return;
-      showScreen('history-screen');
-      await loadHistoryPage();
+    let currentHomeView = 'menu';
+    let currentStatsSub = 'overview';
+    let statsPanelLoaded = false;
+
+    function showHomeView(view) {
+      currentHomeView = view;
+
+      const views = {
+        menu: 'home-menu',
+        play: 'home-view-play',
+        stats: 'home-view-stats',
+        settings: 'home-view-settings'
+      };
+
+      Object.entries(views).forEach(([name, id]) => {
+        document.getElementById(id).classList.toggle('hidden', name !== view);
+      });
+
+      if (view === 'menu') {
+        animateStagger(document.getElementById('home-menu'), '.home-menu-btn');
+        return;
+      }
+
+      if (view === 'stats' && currentUser) {
+        loadStatsPanel();
+      } else if (view === 'settings' && currentUser) {
+        document.getElementById('settings-username').value = currentUser.username;
+        document.getElementById('settings-username-status').textContent = '';
+        document.getElementById('settings-username-status').className = 'settings-status';
+      }
     }
 
-    async function loadHistoryPage() {
+    function showStatsSub(sub) {
+      currentStatsSub = sub;
+      document.getElementById('stats-sub-overview-tab').classList.toggle('active', sub === 'overview');
+      document.getElementById('stats-sub-streak-tab').classList.toggle('active', sub === 'streak');
+      document.getElementById('stats-sub-overview').classList.toggle('hidden', sub !== 'overview');
+      document.getElementById('stats-sub-streak').classList.toggle('hidden', sub !== 'streak');
+    }
+
+    async function loadStatsPanel({ force = false } = {}) {
+      if (!currentUser) return;
+      if (statsPanelLoaded && !force) return;
+      statsPanelLoaded = true;
+
       const errorEl = document.getElementById('history-error');
       const emptyEl = document.getElementById('history-empty');
       const tableBody = document.getElementById('history-table-body');
 
       errorEl.textContent = '';
       tableBody.innerHTML = '';
-      document.getElementById('history-user-line').textContent =
-        `Signed in as ${currentUser.username}`;
 
       try {
-        const [stats, history] = await Promise.all([
+        const [stats, history, activity] = await Promise.all([
           authFetch('/api/me/stats'),
-          authFetch('/api/me/matches')
+          authFetch('/api/me/matches'),
+          authFetch('/api/me/activity')
         ]);
 
         applyStatsSummary(stats);
-        animateStagger(document.querySelector('#history-screen .stats-grid'), '.stat-card');
+        animateStagger(document.querySelector('#stats-sub-overview .stats-grid'), '.stat-card');
 
         const matches = history.matches || [];
         emptyEl.classList.toggle('hidden', matches.length > 0);
@@ -1979,7 +2608,7 @@
           row.innerHTML = `
             <td>${formatMatchDate(match.createdAt)}</td>
             <td>${match.topicName}</td>
-            <td>${match.opponentLabel}${match.forfeit ? ' (forfeit)' : ''}</td>
+            <td>${match.opponentLabel}</td>
             <td>${match.yourScore} - ${match.opponentScore}</td>
             <td class="${resultClass}">${resultLabel}</td>
             <td>${match.accuracyPercent}%</td>
@@ -1987,9 +2616,77 @@
           `;
           tableBody.appendChild(row);
         });
+
+        renderStreak(activity);
       } catch (error) {
+        statsPanelLoaded = false;
         errorEl.textContent = error.message;
         emptyEl.classList.add('hidden');
+      }
+    }
+
+    function renderStreak(activity) {
+      const streakErr = document.getElementById('streak-error');
+      streakErr.textContent = '';
+
+      const days = new Set(activity.days || []);
+      const current = activity.currentStreak || 0;
+      const longest = activity.longestStreak || 0;
+
+      document.getElementById('streak-count').textContent = current;
+
+      const parts = [`Longest streak: ${longest} ${longest === 1 ? 'day' : 'days'}`];
+      parts.push(
+        activity.playedToday
+          ? "You've played today — streak safe."
+          : 'Play a game today to keep your streak alive.'
+      );
+      document.getElementById('streak-sub').textContent = parts.join(' · ');
+
+      const grid = document.getElementById('streak-grid');
+      grid.innerHTML = '';
+
+      const today = new Date(`${activity.today}T00:00:00.000Z`).getTime();
+      for (let offset = 29; offset >= 0; offset -= 1) {
+        const date = new Date(today - offset * 86400000);
+        const key = date.toISOString().slice(0, 10);
+        const cell = document.createElement('div');
+        cell.className = 'streak-cell';
+        if (days.has(key)) cell.classList.add('filled');
+        if (offset === 0) cell.classList.add('today');
+        cell.title = key;
+        grid.appendChild(cell);
+      }
+    }
+
+    async function saveUsername(event) {
+      event.preventDefault();
+      const statusEl = document.getElementById('settings-username-status');
+      const value = document.getElementById('settings-username').value.trim();
+
+      statusEl.className = 'settings-status';
+      statusEl.textContent = '';
+
+      if (value.length < 2) {
+        statusEl.classList.add('err');
+        statusEl.textContent = 'Username must be at least 2 characters.';
+        return;
+      }
+
+      try {
+        const data = await authFetch('/api/me/username', {
+          method: 'PATCH',
+          body: JSON.stringify({ username: value })
+        });
+
+        currentUser = { ...currentUser, ...data.user };
+        updateTopicScreenAuth();
+        document.getElementById('settings-username').value = currentUser.username;
+        statusEl.classList.add('ok');
+        statusEl.textContent = 'Saved.';
+      } catch (error) {
+        statusEl.classList.add('err');
+        statusEl.textContent = error.message;
       }
     }
 
@@ -2004,7 +2701,70 @@
       document.getElementById('register-form').classList.toggle('hidden', channel !== 'email' || isLogin);
       document.getElementById('phone-login-form').classList.toggle('hidden', channel !== 'phone' || !isLogin);
       document.getElementById('phone-register-form').classList.toggle('hidden', channel !== 'phone' || isLogin);
-      document.getElementById('google-auth-wrap').classList.toggle('hidden', channel !== 'email' || !googleClientId);
+    }
+
+    function showAuthLanding() {
+      document.getElementById('auth-landing').classList.remove('hidden');
+      document.getElementById('auth-email-panel').classList.add('hidden');
+      document.getElementById('auth-error').textContent = '';
+    }
+
+    function showEmailSignIn() {
+      document.getElementById('auth-landing').classList.add('hidden');
+      document.getElementById('auth-email-panel').classList.remove('hidden');
+      showAuthMode(document.getElementById('auth-tab-login').classList.contains('active') ? 'login' : 'register');
+    }
+
+    function startGoogleSignIn() {
+      document.getElementById('auth-error').textContent = '';
+      if (!googleClientId) {
+        document.getElementById('auth-error').textContent = 'Google sign-in is not available right now.';
+        return;
+      }
+      const clickable = document.querySelector('#google-signin-btn [role="button"]');
+      if (clickable) {
+        clickable.click();
+        return;
+      }
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.prompt();
+      }
+    }
+
+    function buildAuthWallpaper() {
+      const root = document.getElementById('auth-wallpaper');
+      if (!root || root.dataset.ready) return;
+
+      const mark = '<svg viewBox="6.5 2.8 11 18.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 7.6c0-2.3 1.8-4.1 3.8-4.1 2.1 0 3.8 1.7 3.8 3.9 0 2.1-1.3 3-2.5 3.9-1 .7-1.7 1.5-1.7 3"/><path d="M12 19.2h.01"/></svg>';
+      const trophy = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>';
+      const hourglass = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>';
+      const kinds = [mark, trophy, hourglass];
+      const frag = document.createDocumentFragment();
+
+      for (let i = 0; i < 66; i += 1) {
+        const span = document.createElement('span');
+        span.className = 'auth-icon';
+        span.innerHTML = kinds[i % 3];
+        const col = i % 6;
+        const row = Math.floor(i / 6);
+        const size = 26 + ((i * 7) % 14);
+        span.style.width = `${size}px`;
+        span.style.left = `${col * 16.6 + (row % 2 ? 3 : 0) + ((i * 3) % 5)}%`;
+        span.style.top = `${row * 9.2 + ((i * 5) % 4)}%`;
+        span.style.opacity = String(0.22 + ((i * 13) % 12) / 100);
+        span.style.transform = `rotate(${((i * 17) % 41) - 20}deg)`;
+        frag.appendChild(span);
+      }
+
+      root.appendChild(frag);
+      root.dataset.ready = '1';
+    }
+
+    function applyOpeningShell(screenId) {
+      const isOpening = screenId === 'auth-screen';
+      document.body.classList.toggle('opening-auth', isOpening);
+      document.getElementById('card').classList.toggle('opening-auth', isOpening);
+      if (isOpening) buildAuthWallpaper();
     }
 
     function showAuthMode(mode) {
@@ -2064,6 +2824,7 @@
       document.getElementById('phone-otp-status').textContent = '';
       showAuthMode(pendingPhoneMode === 'signup' ? 'register' : 'login');
       showScreen('auth-screen');
+      showEmailSignIn();
     }
 
     async function handlePhoneSendOtp(event, mode) {
@@ -2151,6 +2912,7 @@
       document.getElementById('verify-status').textContent = '';
       showAuthMode('login');
       showScreen('auth-screen');
+      showEmailSignIn();
     }
 
     async function resendVerificationEmail() {
@@ -2184,6 +2946,7 @@
       if (!verified) return;
 
       window.history.replaceState({}, '', window.location.pathname);
+      showEmailSignIn();
       showAuthMode('login');
 
       if (verified === 'success') {
@@ -2201,31 +2964,23 @@
     }
 
     function updateTopicScreenAuth() {
-      const userBar = document.getElementById('user-bar');
+      const userLine = document.getElementById('home-user-line');
       const guestNote = document.getElementById('guest-note');
       const nicknameField = document.getElementById('nickname');
+      const signedIn = Boolean(currentUser);
 
-      if (currentUser) {
-        userBar.classList.remove('hidden');
-        guestNote.classList.add('hidden');
-        nicknameField.classList.add('hidden');
-        document.getElementById('user-bar-name').textContent = currentUser.username;
-        if (currentUser.statsSummary) {
-          document.getElementById('user-bar-record').textContent =
-            `${currentUser.statsSummary.winPercent}% win · ${currentUser.statsSummary.accuracyPercent}% acc · ${formatStatMs(currentUser.statsSummary.avgAnswerTimeMs)} avg`;
-        } else {
-          document.getElementById('user-bar-record').textContent =
-            `${currentUser.wins}W · ${currentUser.losses}L`;
-        }
-      } else if (isGuest) {
-        userBar.classList.add('hidden');
-        guestNote.classList.remove('hidden');
-        nicknameField.classList.remove('hidden');
-      } else {
-        userBar.classList.add('hidden');
-        guestNote.classList.add('hidden');
-        nicknameField.classList.remove('hidden');
+      userLine.classList.toggle('hidden', !signedIn);
+      guestNote.classList.toggle('hidden', signedIn || !isGuest);
+      nicknameField.classList.toggle('hidden', signedIn);
+
+      if (signedIn) {
+        userLine.innerHTML = `Signed in as <strong>${currentUser.username}</strong>`;
       }
+
+      document.getElementById('stats-signed-in').classList.toggle('hidden', !signedIn);
+      document.getElementById('stats-signed-out').classList.toggle('hidden', signedIn);
+      document.getElementById('settings-signed-in').classList.toggle('hidden', !signedIn);
+      document.getElementById('settings-signed-out').classList.toggle('hidden', signedIn);
     }
 
     async function handleRegister(event) {
@@ -2312,13 +3067,15 @@
       clearSession();
       isGuest = false;
       showScreen('auth-screen');
+      showAuthLanding();
       document.getElementById('auth-error').textContent = '';
     }
 
     function setupGoogleSignIn() {
       if (!googleClientId || !window.google?.accounts?.id) return;
 
-      document.getElementById('google-auth-wrap').classList.remove('hidden');
+      const slot = document.getElementById('auth-google-slot');
+      const width = Math.max(220, Math.floor((slot?.getBoundingClientRect().width) || 278));
 
       window.google.accounts.id.initialize({
         client_id: googleClientId,
@@ -2328,8 +3085,10 @@
       window.google.accounts.id.renderButton(document.getElementById('google-signin-btn'), {
         theme: 'outline',
         size: 'large',
-        width: 320
+        width
       });
+
+      slot?.classList.add('ready');
     }
 
     async function loadAuthConfig() {
@@ -2374,6 +3133,8 @@
 
     async function initApp() {
       updateSoundToggle();
+      setupConfirmModal();
+      buildAuthWallpaper();
       document.getElementById('card').classList.add('card-enter');
       document.addEventListener('visibilitychange', handleVisibilityResume);
       window.addEventListener('focus', handleVisibilityResume);
@@ -2801,11 +3562,10 @@
       if (!screen) return;
 
       const entranceMap = {
-        'topic-screen': ['.topic-search-wrap', '.topic-row', '.user-bar:not(.hidden)', '.nickname-field:not(.hidden)'],
-        'history-screen': ['.stat-card', '#history-table-body tr'],
+        'topic-screen': ['.home-menu-btn', '.topic-row'],
         'score-screen': ['.score-value', '.score-label', '.btn-row'],
         'match-score-screen': ['.match-result', '.match-scores > div', '.summary-chart-wrap', '.round-summary-table', '.btn-row'],
-        'auth-screen': ['.auth-tabs', '.auth-form:not(.hidden)', '#google-auth-wrap:not(.hidden)', '.guest-btn'],
+        'auth-screen': ['.auth-wordmark', '.auth-ghost-btn', '.auth-email-panel:not(.hidden) .auth-form:not(.hidden)'],
         'verify-screen': ['.verify-icon', '.verify-message', '.verify-actions'],
         'waiting-screen': ['.waiting-ring', '.waiting-title', '.waiting-topic', '.waiting-player', '.waiting-status', '.cancel-btn']
       };
@@ -2824,10 +3584,13 @@
       const next = document.getElementById(screenId);
       const prev = currentScreenId ? document.getElementById(currentScreenId) : null;
 
-      card.classList.toggle('quiz-layout', screenId === 'quiz-screen');
-      card.classList.toggle('summary-layout', screenId === 'match-score-screen');
-      card.classList.toggle('topic-layout', screenId === 'topic-screen');
-      card.classList.toggle('history-layout', screenId === 'history-screen');
+      const applyCardChrome = () => {
+        card.classList.toggle('quiz-layout', screenId === 'quiz-screen');
+        card.classList.toggle('summary-layout', screenId === 'match-score-screen');
+        card.classList.toggle('topic-layout', screenId === 'topic-screen');
+        card.classList.toggle('history-layout', screenId === 'history-screen');
+        applyOpeningShell(screenId);
+      };
 
       const activateScreen = () => {
         ALL_SCREENS.forEach((id) => {
@@ -2837,7 +3600,9 @@
           el.classList.toggle('screen-visible', isActive);
           el.classList.remove('screen-leaving', 'screen-entering');
         });
+        applyCardChrome();
         currentScreenId = screenId;
+        if (screenId === 'topic-screen') showHomeView('menu');
         runScreenEntrance(screenId);
       };
 
@@ -2852,6 +3617,7 @@
       setTimeout(() => {
         prev.classList.add('hidden');
         prev.classList.remove('screen-leaving');
+        applyCardChrome();
 
         next.classList.remove('hidden');
         next.classList.add('screen-entering');
@@ -2884,7 +3650,25 @@
         vsEl.textContent = `You vs ${vsName}`;
       }
 
+      document.getElementById('countdown-cancel').classList.toggle('hidden', !solo);
+
       playCountdownBeep(count);
+    }
+
+    function cancelCountdown() {
+      clearCountdown();
+      clearSoloAdvanceTimeout();
+      stopBackgroundMusic();
+      gameMode = 'solo';
+      answered = false;
+      questions = [];
+      currentQuestion = null;
+      currentIndex = 0;
+      totalScore = 0;
+      correctCount = 0;
+      setMultiplayerUi(false);
+      showScreen(currentUser || isGuest ? 'topic-screen' : 'auth-screen');
+      if (currentUser || isGuest) loadTopics();
     }
 
     function clearCountdown() {
@@ -3432,6 +4216,59 @@
       showScreen('topic-screen');
     }
 
+    let pendingConfirmAction = null;
+
+    function setupConfirmModal() {
+      const modal = document.getElementById('confirm-modal');
+
+      document.getElementById('confirm-modal-cancel').addEventListener('click', closeConfirm);
+      document.getElementById('confirm-modal-confirm').addEventListener('click', () => {
+        const action = pendingConfirmAction;
+        closeConfirm();
+        if (action) action();
+      });
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeConfirm();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modal.classList.contains('hidden')) closeConfirm();
+      });
+    }
+
+    function openConfirm({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm }) {
+      document.getElementById('confirm-modal-title').textContent = title;
+      document.getElementById('confirm-modal-message').textContent = message;
+      document.getElementById('confirm-modal-confirm').textContent = confirmLabel;
+      document.getElementById('confirm-modal-cancel').textContent = cancelLabel;
+      pendingConfirmAction = onConfirm;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    function closeConfirm() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      pendingConfirmAction = null;
+    }
+
+    function confirmExitGame() {
+      const multiplayer = gameMode === 'multiplayer';
+      openConfirm({
+        title: 'Leave the game?',
+        message: multiplayer
+          ? 'Your opponent will be awarded the win, and this match won’t be saved to your history.'
+          : 'This quiz will end and your progress won’t be saved.',
+        confirmLabel: 'Leave',
+        cancelLabel: 'Keep playing',
+        onConfirm: leaveGame
+      });
+    }
+
+    function leaveGame() {
+      if (gameMode === 'multiplayer' && socket) {
+        socket.emit('match:leave');
+      }
+      restartQuiz();
+    }
+
     function getOptionLabel(option) {
       if (!option) return 'Option';
       if (typeof option === 'string') return option;
@@ -3737,6 +4574,27 @@
       animateCountUp(document.getElementById('score-value'), totalScore);
       document.getElementById('score-label').textContent =
         `${correctCount} / ${questions.length} correct in ${selectedTopicName}`;
+
+      recordSoloGame();
+    }
+
+    function recordSoloGame() {
+      if (!currentUser || gameMode !== 'solo' || !selectedTopicId || questions.length === 0) {
+        return;
+      }
+
+      statsPanelLoaded = false;
+      authFetch('/api/me/solo', {
+        method: 'POST',
+        body: JSON.stringify({
+          topicId: selectedTopicId,
+          score: totalScore,
+          correctCount,
+          totalQuestions: questions.length
+        })
+      }).catch(() => {
+        // Non-blocking: the score screen is unaffected if this fails.
+      });
     }
 
     function restartQuiz() {
