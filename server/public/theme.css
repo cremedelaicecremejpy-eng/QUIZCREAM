@@ -1,0 +1,745 @@
+/* Quticks theme — the sign-in screen's language, applied to every screen.
+ *
+ * Taken from the opening screen: a burnt-orange ground, white 2px-bordered
+ * translucent surfaces, 16px radii, Bungee for display and Inter for text, and
+ * a 390x844 phone frame once there is room for one.
+ *
+ * Loaded last on purpose (theme.js appends it after the inline styles), so it
+ * overrides without needing specificity tricks or !important.
+ *
+ * One deliberate departure: white on #C45F12 is 4.21:1, which carries the
+ * opening screen's large bold type but fails the 4.5:1 floor for the body text
+ * everywhere else. Content sits on a slightly deeper panel (~5.5:1) so the
+ * brand colour is kept and the words stay readable.
+ */
+
+:root {
+  --q-ground: #C45F12;
+  --q-ground-deep: #9B4A0E;
+  --q-ground-darkest: #7A390B;
+
+  /* Panels: the ground, pushed down for contrast. */
+  --q-panel: rgba(0, 0, 0, 0.14);
+  --q-panel-soft: rgba(0, 0, 0, 0.08);
+  --q-raised: rgba(255, 255, 255, 0.09);
+  --q-raised-hover: rgba(255, 255, 255, 0.18);
+
+  --q-line: rgba(255, 255, 255, 0.28);
+  --q-line-strong: #ffffff;
+
+  --q-ink: #ffffff;
+  --q-ink-soft: rgba(255, 255, 255, 0.86);
+  --q-ink-faint: rgba(255, 255, 255, 0.66);
+
+  --q-good: #8CE99A;
+  --q-bad: #FFB4A8;
+  --q-gold: #FFD479;
+
+  --q-radius: 16px;
+  --q-radius-lg: 22px;
+  --q-radius-frame: 32px;
+  --q-tap: 52px;
+
+  --q-display: "Bungee", system-ui, sans-serif;
+  --q-text: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --q-shadow-frame: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 28px 80px rgba(0, 0, 0, 0.32);
+}
+
+/* ------------------------------------------------------------ page shell */
+
+body {
+  font-family: var(--q-text);
+  background: var(--q-ground);
+  color: var(--q-ink);
+  padding: 0;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.card {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  max-width: none;
+  width: 100%;
+  min-height: 100dvh;
+  padding: max(1.25rem, env(safe-area-inset-top)) 1.25rem max(1.25rem, env(safe-area-inset-bottom));
+  color: var(--q-ink);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+}
+
+/* The phone frame, once the window is wide enough to hold one. Matches the
+   opening screen so the hand-off into the app is seamless. */
+@media (min-width: 768px) {
+  body {
+    background: radial-gradient(circle at 50% 42%, #d36a18 0%, var(--q-ground-deep) 62%, var(--q-ground-darkest) 100%);
+    padding: 1.5rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card {
+    width: 390px;
+    min-height: 0;
+    height: min(844px, calc(100dvh - 3rem));
+    padding: 1.5rem 1.25rem;
+    border-radius: var(--q-radius-frame);
+    background: var(--q-ground);
+    box-shadow: var(--q-shadow-frame);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  }
+
+  .card::-webkit-scrollbar { width: 6px; }
+  .card::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.28);
+    border-radius: 3px;
+  }
+}
+
+/* --------------------------------------------------------------- type */
+
+h1, h2, h3,
+.home-view-title, .waiting-title, .score-message, .countdown-label {
+  font-family: var(--q-display);
+  font-weight: 400;
+  color: var(--q-ink);
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+
+h1 { font-size: 1.65rem; line-height: 1.1; }
+h2 { font-size: 1.2rem; }
+
+p, span, td, th, label, input, button, a, div {
+  font-family: var(--q-text);
+}
+
+.subtitle, .guest-note, .settings-note, .auth-hint,
+.stat-label, .waiting-status, .streak-sub, .max-score-hint {
+  color: var(--q-ink-soft);
+}
+
+a { color: var(--q-ink); }
+
+/* ------------------------------------------------------------- controls */
+
+button,
+.topic-btn, .home-menu-btn, .restart-btn, .home-btn, .next-btn,
+.auth-submit, .settings-save, .modal-btn, .cancel-btn, .exit-game-btn,
+.home-back-btn, .logout-btn, .verify-secondary, .stats-subtab,
+.auth-tab, .auth-method-tab {
+  font-family: var(--q-text);
+  font-weight: 600;
+  border-radius: var(--q-radius);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+}
+
+/* Primary: the opening screen's ghost button. */
+.topic-btn, .restart-btn, .auth-submit, .settings-save,
+.modal-btn, .next-btn, .home-menu-btn, .verify-actions .auth-submit {
+  min-height: var(--q-tap);
+  padding: 0.875rem 1.25rem;
+  border: 2px solid var(--q-line-strong);
+  background: var(--q-raised);
+  color: var(--q-ink);
+  font-size: 0.9375rem;
+}
+
+.topic-btn:hover, .restart-btn:hover, .auth-submit:hover,
+.settings-save:hover, .modal-btn:hover, .next-btn:hover, .home-menu-btn:hover {
+  background: var(--q-raised-hover);
+}
+
+/* The one that matters on each screen gets a solid fill. */
+.topic-btn.battle, .restart-btn, .auth-submit, .settings-save, .modal-btn:not(.ghost) {
+  background: #ffffff;
+  color: #8F430C;
+}
+
+.topic-btn.battle:hover, .restart-btn:hover, .auth-submit:hover,
+.settings-save:hover, .modal-btn:not(.ghost):hover {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+/* Quiet ones. */
+.home-back-btn, .cancel-btn, .logout-btn, .verify-secondary,
+.exit-game-btn, .home-btn, .modal-btn.ghost, .auth-back {
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  border: 2px solid var(--q-line);
+  background: transparent;
+  color: var(--q-ink);
+  font-size: 0.875rem;
+}
+
+.home-back-btn:hover, .cancel-btn:hover, .logout-btn:hover,
+.verify-secondary:hover, .exit-game-btn:hover, .home-btn:hover,
+.modal-btn.ghost:hover {
+  background: var(--q-raised);
+  border-color: var(--q-line-strong);
+}
+
+.logout-btn, .danger, .exit-game-btn {
+  border-color: rgba(255, 180, 168, 0.6);
+  color: var(--q-bad);
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.75);
+  outline-offset: 2px;
+}
+
+button:active { transform: translateY(1px); }
+
+/* Tabs. */
+.auth-tab, .auth-method-tab, .stats-subtab {
+  min-height: 42px;
+  padding: 0.5rem 0.9rem;
+  border: 2px solid var(--q-line);
+  background: var(--q-panel-soft);
+  color: var(--q-ink-soft);
+  font-size: 0.875rem;
+}
+
+.auth-tab.active, .auth-method-tab.active, .stats-subtab.active {
+  border-color: var(--q-line-strong);
+  background: var(--q-raised-hover);
+  color: var(--q-ink);
+}
+
+/* -------------------------------------------------------------- inputs */
+
+input, select, textarea,
+.nickname-field, .settings-input, .otp-input, .auth-form input {
+  font-family: var(--q-text);
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--q-radius);
+  border: 2px solid var(--q-line);
+  background: var(--q-panel);
+  color: var(--q-ink);
+  font-size: 1rem;
+}
+
+input::placeholder { color: var(--q-ink-faint); }
+
+input:focus, .auth-form input:focus {
+  border-color: var(--q-line-strong);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.settings-label, .auth-form label {
+  color: var(--q-ink-soft);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+}
+
+.otp-input {
+  font-family: var(--q-display);
+  letter-spacing: 0.35em;
+  text-align: center;
+  font-size: 1.35rem;
+}
+
+/* --------------------------------------------------------------- home */
+
+.home-header h1, .home-view-title {
+  font-family: var(--q-display);
+  color: var(--q-ink);
+}
+
+.home-header h1 { font-size: 2rem; letter-spacing: 0.04em; }
+
+.home-menu-list { gap: 0.75rem; }
+
+.home-menu-btn {
+  text-align: left;
+  justify-content: flex-start;
+  gap: 0.9rem;
+  min-height: 72px;
+}
+
+.home-menu-text strong {
+  font-family: var(--q-display);
+  font-weight: 400;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+  color: var(--q-ink);
+}
+
+.home-menu-text span { color: var(--q-ink-soft); font-size: 0.8125rem; }
+.home-menu-icon { opacity: 1; }
+
+.home-user-line { color: var(--q-ink-soft); }
+.home-user-line strong { color: var(--q-ink); }
+
+.home-view-head { border-bottom: 1px solid var(--q-line); padding-bottom: 0.75rem; }
+
+/* -------------------------------------------------------------- topics */
+
+.topic-search-wrap {
+  border: 2px solid var(--q-line);
+  background: var(--q-panel);
+  border-radius: var(--q-radius);
+}
+
+.topic-search-wrap input { border: none; background: transparent; min-height: 46px; }
+.topic-search-icon { color: var(--q-ink-faint); }
+
+.topic-list { gap: 0.75rem; }
+
+.topic-row {
+  background: var(--q-panel);
+  border: 2px solid var(--q-line);
+  border-radius: var(--q-radius-lg);
+  padding: 0.9rem 1rem;
+}
+
+.topic-row:hover { border-color: var(--q-line-strong); background: rgba(0, 0, 0, 0.2); }
+
+.topic-name {
+  font-family: var(--q-display);
+  font-weight: 400;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+  color: var(--q-ink);
+}
+
+.topic-actions { gap: 0.5rem; }
+.topic-actions .topic-btn { min-height: 44px; padding: 0.5rem 1rem; font-size: 0.875rem; }
+
+.topic-error, .error-msg { color: var(--q-bad); }
+.topic-search-empty { color: var(--q-ink-soft); }
+
+/* --------------------------------------------------------------- quiz */
+
+.quiz-screen, .quiz-body, .quiz-main { color: var(--q-ink); }
+
+.progress, .timer-label, .round-bonus-label, .opponent-pick-label {
+  color: var(--q-ink-soft);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.question {
+  font-family: var(--q-text);
+  font-weight: 600;
+  font-size: 1.125rem;
+  line-height: 1.4;
+  color: var(--q-ink);
+}
+
+.options { gap: 0.625rem; }
+
+.options button {
+  min-height: var(--q-tap);
+  padding: 0.875rem 1rem;
+  border: 2px solid var(--q-line-strong);
+  background: var(--q-raised);
+  color: var(--q-ink);
+  text-align: left;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.options button:hover:not(:disabled) { background: var(--q-raised-hover); }
+
+.options button.correct {
+  background: var(--q-good);
+  border-color: var(--q-good);
+  color: #16401D;
+}
+
+.options button.wrong {
+  background: var(--q-bad);
+  border-color: var(--q-bad);
+  color: #5C1D14;
+}
+
+.options button:disabled { opacity: 0.85; cursor: default; }
+
+.feedback { font-weight: 700; color: var(--q-ink); }
+
+.timer-track, .score-track-vertical {
+  background: rgba(0, 0, 0, 0.26);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.timer-fill { background: #ffffff; }
+.score-fill-vertical { background: #ffffff; }
+.score-fill-opponent { background: var(--q-gold); }
+
+.score-sidebar-title { color: var(--q-ink-soft); font-size: 0.75rem; letter-spacing: 0.08em; }
+.live-score { font-family: var(--q-display); color: var(--q-ink); }
+.max-score-hint { color: var(--q-ink-faint); }
+
+.question-transition-label { font-family: var(--q-display); color: var(--q-ink); }
+
+/* ------------------------------------------------- countdown & waiting */
+
+.countdown-screen, .waiting-screen { text-align: center; align-items: center; }
+
+.countdown-value {
+  font-family: var(--q-display);
+  font-size: clamp(4rem, 22vw, 6rem);
+  color: var(--q-ink);
+  line-height: 1;
+}
+
+.countdown-topic, .countdown-vs, .waiting-topic { color: var(--q-ink-soft); }
+
+.waiting-ring {
+  border-color: rgba(255, 255, 255, 0.25);
+  border-top-color: #ffffff;
+}
+
+.waiting-title { font-family: var(--q-display); color: var(--q-ink); }
+.waiting-player { font-weight: 700; color: var(--q-ink); }
+.waiting-dots { color: var(--q-ink); }
+
+/* -------------------------------------------------------- match result */
+
+.match-result { font-family: var(--q-display); letter-spacing: 0.03em; }
+.match-result.win { color: var(--q-good); }
+.match-result.lose { color: var(--q-bad); }
+.match-result.draw { color: var(--q-gold); }
+
+.match-scores {
+  background: var(--q-panel);
+  border: 2px solid var(--q-line);
+  border-radius: var(--q-radius-lg);
+  padding: 1rem;
+}
+
+.match-scores .label { color: var(--q-ink-soft); font-size: 0.75rem; letter-spacing: 0.08em; }
+.match-scores .value { font-family: var(--q-display); font-size: 2rem; color: var(--q-ink); }
+
+.match-meta { color: var(--q-ink-soft); }
+
+.summary-chart-wrap {
+  background: var(--q-panel);
+  border: 2px solid var(--q-line);
+  border-radius: var(--q-radius-lg);
+}
+
+.summary-chart-title { color: var(--q-ink-soft); letter-spacing: 0.08em; font-size: 0.75rem; }
+.chart-legend { color: var(--q-ink-soft); }
+.legend-dot.you { background: #ffffff; }
+.legend-dot.opponent { background: var(--q-gold); }
+
+.round-summary-table, .history-table { color: var(--q-ink); }
+
+.round-summary-table th, .history-table th {
+  color: var(--q-ink-soft);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--q-line);
+}
+
+.round-summary-table td, .history-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 0.8125rem;
+}
+
+.question-cell { color: var(--q-ink-soft); }
+.pts-you { color: #ffffff; font-weight: 700; }
+.pts-opponent { color: var(--q-gold); font-weight: 700; }
+.result-win { color: var(--q-good); }
+.result-loss { color: var(--q-bad); }
+.result-draw { color: var(--q-gold); }
+
+.history-table-wrap { border: 2px solid var(--q-line); border-radius: var(--q-radius); }
+
+/* Solo result. */
+.score-value { font-family: var(--q-display); font-size: 3rem; color: var(--q-ink); }
+.score-label, .score-message { color: var(--q-ink-soft); }
+
+/* --------------------------------------------------------------- stats */
+
+.stats-section-title {
+  font-family: var(--q-display);
+  font-weight: 400;
+  color: var(--q-ink);
+  letter-spacing: 0.06em;
+  font-size: 0.9375rem;
+}
+
+.stats-grid { gap: 0.625rem; }
+
+.stat-card {
+  background: var(--q-panel);
+  border: 2px solid var(--q-line);
+  border-radius: var(--q-radius);
+  padding: 0.75rem;
+}
+
+.stat-label {
+  color: var(--q-ink-soft);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stat-value { font-family: var(--q-display); font-weight: 400; color: var(--q-ink); font-size: 1.4rem; }
+
+.streak-headline { color: var(--q-ink); }
+.streak-count { font-family: var(--q-display); color: var(--q-gold); }
+.streak-unit, .streak-sub { color: var(--q-ink-soft); }
+.streak-flame { filter: saturate(1.1); }
+
+.streak-grid span { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
+.streak-grid span.on, .streak-grid span.active { background: var(--q-gold); }
+
+/* ------------------------------------------------------------ settings */
+
+.settings-section {
+  background: var(--q-panel);
+  border: 2px solid var(--q-line);
+  border-radius: var(--q-radius-lg);
+  padding: 1rem;
+}
+
+/* The field and its button share one row. An <input> will not shrink past its
+   intrinsic width unless min-width is cleared, which is what pushed Save out
+   past the panel edge. */
+.settings-row { align-items: center; gap: 10px; }
+.settings-input { min-width: 0; }
+.settings-save { padding: 12px 18px; }
+
+.settings-status { color: var(--q-ink-soft); }
+.settings-status:empty { display: none; }
+.sound-toggle { color: var(--q-ink); }
+
+/* ------------------------------------------------- verify / otp / modal */
+
+.verify-screen { text-align: center; }
+.verify-icon { opacity: 1; }
+.verify-message { color: var(--q-ink-soft); }
+.verify-email { font-weight: 700; color: var(--q-ink); }
+
+.modal-overlay { background: rgba(60, 26, 4, 0.72); backdrop-filter: blur(3px); }
+
+.modal-card {
+  background: var(--q-ground-deep);
+  border: 2px solid var(--q-line-strong);
+  border-radius: var(--q-radius-lg);
+  color: var(--q-ink);
+}
+
+.modal-title { font-family: var(--q-display); font-weight: 400; color: var(--q-ink); }
+.modal-message { color: var(--q-ink-soft); }
+
+.auth-success { color: var(--q-good); }
+
+/* ---------------------------------------------- levels (lands with #12) */
+
+.lv-chip {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--q-ink);
+  border: 1px solid var(--q-line);
+}
+
+.lv-chip.lv-muted { background: rgba(0, 0, 0, 0.18); color: var(--q-ink-faint); border-color: transparent; }
+.lv-bar { background: rgba(0, 0, 0, 0.28); }
+.lv-bar > i { background: var(--q-gold); }
+
+.lv-xp .lv-gain { font-family: var(--q-display); font-weight: 400; color: var(--q-gold); }
+.lv-xp .lv-where, .lv-xp .lv-counts { color: var(--q-ink-soft); }
+
+.lv-up {
+  background: rgba(255, 212, 121, 0.2);
+  border: 2px solid var(--q-gold);
+  color: var(--q-gold);
+}
+
+.lv-stats h3 { font-family: var(--q-display); font-weight: 400; color: var(--q-ink); opacity: 1; }
+.lv-stats .lv-row { border-top-color: rgba(255, 255, 255, 0.16); }
+.lv-stats .lv-num { color: var(--q-ink-soft); }
+
+/* ------------------------------------------------------------ motion */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+ * Specificity pass.
+ *
+ * The rules below exist because the page's own stylesheet states these with
+ * more specific selectors than the ones above (`.card h1` beats `h1`,
+ * `#topic-search` beats `input`, `.round-summary-table .pts-you` beats
+ * `.pts-you`). Matching their shape is what makes the cascade land, rather
+ * than reaching for !important.
+ * -------------------------------------------------------------------------- */
+
+.card h1,
+.card h2,
+.card .home-view-title {
+  font-family: var(--q-display);
+  font-weight: 400;
+  color: var(--q-ink);
+  letter-spacing: 0.03em;
+}
+
+/* Search field. */
+#topic-search,
+#nickname {
+  background: transparent;
+  border: none;
+  color: var(--q-ink);
+}
+
+#topic-search:focus,
+#nickname:focus,
+.nickname-field:focus,
+.settings-input:focus,
+.auth-form input:focus,
+.otp-input:focus {
+  border-color: var(--q-line-strong);
+  outline: none;
+}
+
+.topic-search-wrap:focus-within {
+  border-color: var(--q-line-strong);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Everything the old stylesheet painted in the previous brand blue. */
+.timer-label,
+.round-bonus-label,
+.question-transition-label,
+.countdown-label,
+.countdown-vs,
+.waiting-label,
+.waiting-topic,
+.opponent-pick-label,
+.guest-btn,
+.verify-secondary,
+.stats-section-title {
+  color: var(--q-ink-soft);
+}
+
+.card .match-result.draw { color: var(--q-gold); }
+.feedback.opponent-scored { color: var(--q-gold); }
+.verify-email { color: var(--q-ink); }
+
+/* Live scores and result numbers. */
+.live-score,
+.score-sidebar-you .live-score,
+.score-screen .score-value,
+.match-scores .value,
+.stat-value {
+  font-family: var(--q-display);
+  font-weight: 400;
+  color: var(--q-ink);
+}
+
+.score-sidebar-opponent .live-score { color: var(--q-gold); }
+
+.round-summary-table .pts-you { color: var(--q-ink); font-weight: 700; }
+.round-summary-table .pts-opponent { color: var(--q-gold); font-weight: 700; }
+
+/* Bars and rings. */
+.timer-fill { background: #ffffff; }
+.score-fill-vertical { background: #ffffff; }
+.score-fill-opponent { background: var(--q-gold); }
+
+.waiting-ring {
+  border-color: rgba(255, 255, 255, 0.22);
+  border-top-color: #ffffff;
+  border-right-color: var(--q-gold);
+}
+
+/* Streak grid. */
+.streak-count { font-family: var(--q-display); font-weight: 400; color: var(--q-gold); }
+.streak-cell { background: rgba(255, 255, 255, 0.18); border-radius: 4px; }
+.streak-cell.filled { background: var(--q-gold); }
+.streak-cell.today { outline: 2px solid #ffffff; outline-offset: 1px; }
+
+/* The rival's pick, highlighted on an answered question. */
+.options button.opponent-pick-correct { box-shadow: inset 0 0 0 2px var(--q-gold); }
+
+/* Buttons whose colour came from the old palette. */
+.next-btn, .restart-btn, .auth-submit, .settings-save {
+  background: #ffffff;
+  color: #8F430C;
+  border: 2px solid #ffffff;
+}
+
+.home-btn, .cancel-btn, .logout-btn, .home-back-btn, .modal-btn.ghost {
+  color: var(--q-ink);
+  border: 2px solid var(--q-line);
+  background: transparent;
+}
+
+.logout-btn { border-color: rgba(255, 180, 168, 0.6); color: var(--q-bad); }
+
+.topic-btn.battle {
+  background: #ffffff;
+  color: #8F430C;
+  border: 2px solid #ffffff;
+}
+
+.topic-btn:hover:not(:disabled),
+.home-menu-btn:hover,
+.options button:hover:not(:disabled) {
+  border-color: var(--q-line-strong);
+}
+
+.auth-method-tab.active, .auth-tab.active, .stats-subtab.active {
+  border-color: var(--q-line-strong);
+  color: var(--q-ink);
+  background: var(--q-raised-hover);
+}
+
+/* ---------------------------------------------------------------------------
+   The two rules the generic selectors lose to.
+
+   `.card .question` (0,2,0) and `.waiting-topic`'s own background both sit in
+   the inline stylesheet; the plain `.question` and the colour-only list above
+   cannot reach them.
+   --------------------------------------------------------------------------- */
+
+.card .question {
+  color: var(--q-ink);
+  font-family: var(--q-text);
+}
+
+.waiting-topic {
+  background: var(--q-raised);
+  color: var(--q-ink);
+  border: 1px solid var(--q-line);
+}
+
+/* ---------------------------------------------------------------------------
+   The question column.
+
+   The two score rails reserved 3.5rem each for a 14px track, which left the
+   question 182px of a 390px phone - about seven characters a line. Trimming
+   the rails to the width they actually use, and the gutter with them, gives
+   the question 238px and most of its wrapping back.
+   --------------------------------------------------------------------------- */
+
+.quiz-body { gap: 0.75rem; }
+.score-sidebar { width: 2.25rem; }
+
+.card .question {
+  font-size: clamp(1.1rem, 5.6vw, 1.5rem);
+  line-height: 1.28;
+  margin-bottom: 1.5rem;
+}
